@@ -224,14 +224,19 @@ function CategoryCard({ category }: { category: Recommendation["categories"][num
     },
   }[category.status];
 
+  const showLearnMore = category.status === "green" || category.status === "yellow";
+
   return (
-    <button
-      onClick={() => setOpen((v) => !v)}
+    <div
       className={`block w-full rounded-xl border border-l-4 bg-card p-4 text-left shadow-sm transition hover:shadow-md ${styles.border} ${
         styles.muted ? "opacity-70" : ""
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-start justify-between gap-3 text-left"
+      >
         <div>
           <h3 className="font-semibold text-navy">{category.category_name}</h3>
           <p className="mt-1 text-sm text-muted-foreground">{category.reason.split(". ")[0]}.</p>
@@ -244,9 +249,9 @@ function CategoryCard({ category }: { category: Recommendation["categories"][num
             className={`h-4 w-4 text-muted-foreground transition ${open ? "rotate-180" : ""}`}
           />
         </div>
-      </div>
+      </button>
       {open && (
-        <div className="mt-3 space-y-2 border-t pt-3 text-sm">
+        <div className="mt-3 space-y-3 border-t pt-3 text-sm">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Why
@@ -265,8 +270,86 @@ function CategoryCard({ category }: { category: Recommendation["categories"][num
             </p>
             <p className="mt-1">{category.examples.join(", ")}</p>
           </div>
+          {showLearnMore && (
+            <ProductExplorer
+              activeIngredient={category.category_name}
+              examples={category.examples}
+            />
+          )}
         </div>
       )}
-    </button>
+    </div>
+  );
+}
+
+function ProductExplorer({
+  activeIngredient,
+  examples,
+}: {
+  activeIngredient: string;
+  examples: string[];
+}) {
+  const fetchProducts = useServerFn(getProductDetails);
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<ProductList | null>(null);
+
+  const load = async () => {
+    if (data || loading) return;
+    setLoading(true);
+    try {
+      const r = await fetchProducts({
+        data: { active_ingredient: activeIngredient, examples },
+      });
+      setData(r);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Couldn't load products");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!data) {
+    return (
+      <button
+        type="button"
+        onClick={load}
+        disabled={loading}
+        className="inline-flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 disabled:opacity-60"
+      >
+        {loading ? (
+          <>
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading products…
+          </>
+        ) : (
+          <>
+            <Tag className="h-3.5 w-3.5" /> Learn more — products &amp; prices
+          </>
+        )}
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border bg-muted/30 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Products containing {data.active_ingredient}
+      </p>
+      <ul className="mt-2 divide-y">
+        {data.products.map((p, i) => (
+          <li key={i} className="flex items-start justify-between gap-3 py-2">
+            <div>
+              <p className="text-sm font-medium text-navy">{p.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {p.type} · {p.form} · {p.strength} · {p.typical_pack}
+              </p>
+            </div>
+            <p className="whitespace-nowrap text-sm font-semibold text-navy">
+              {p.reference_price_usd}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-[11px] italic text-muted-foreground">{data.price_note}</p>
+    </div>
   );
 }
