@@ -258,6 +258,46 @@ function SymptomPage() {
 
         {stage === "input" && (
           <div className="mt-6 rounded-2xl border bg-card p-6 shadow-sm">
+            {voiceSupported && (
+              <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-navy">
+                      Talk to OTC&amp;Me instead
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Hands-free voice conversation — one question at a time, no typing needed.
+                    </p>
+                  </div>
+                  {voiceActive ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={stopVoice}
+                    >
+                      <Square className="h-4 w-4" /> Stop
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={runVoiceFlow}
+                      disabled={voiceActive}
+                    >
+                      <Mic className="h-4 w-4" /> Start voice
+                    </Button>
+                  )}
+                </div>
+                {voiceActive && (
+                  <VoiceStatus
+                    speaking={voice.speaking}
+                    listening={voice.listening}
+                    interim={voice.interim}
+                  />
+                )}
+              </div>
+            )}
             <label className="text-sm font-medium">Describe your symptom or illness</label>
             <Textarea
               autoFocus
@@ -265,10 +305,26 @@ function SymptomPage() {
               value={symptom}
               onChange={(e) => setSymptom(e.target.value)}
               className="mt-2 min-h-[100px]"
+              disabled={voiceActive}
             />
             <div className="mt-4 flex justify-end">
-              <Button onClick={submitSymptom} disabled={!symptom.trim()}>
+              <Button onClick={submitSymptom} disabled={!symptom.trim() || voiceActive}>
                 Continue <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {voiceActive && stage !== "input" && (
+          <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <VoiceStatus
+                speaking={voice.speaking}
+                listening={voice.listening}
+                interim={voice.interim}
+              />
+              <Button type="button" variant="destructive" size="sm" onClick={stopVoice}>
+                <Square className="h-4 w-4" /> Stop voice
               </Button>
             </div>
           </div>
