@@ -254,19 +254,9 @@ function SymptomPage() {
         }),
       );
 
-      const top = sorted.categories[0];
-      if (top) {
-        const label =
-          top.status === "green"
-            ? "is generally safe for you"
-            : top.status === "yellow"
-              ? "may be okay, but please check with a pharmacist first"
-              : "is not recommended for you";
-        await say(
-          `Your top option is ${top.category_name}. It ${label}. ${top.reason} Opening your recommendations now.`,
-        );
-      }
+      sessionStorage.setItem("otcandme_voice_active", "1");
       navigate({ to: "/recommendations" });
+
 
     } catch (e) {
       const isCancel =

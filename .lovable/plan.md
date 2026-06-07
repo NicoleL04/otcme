@@ -1,28 +1,31 @@
-## Plan
+# Sync voice with recommendations screen
 
-Contain the symptom-page conversation (voice + text) in a fixed-height, internally scrollable chat window so the page itself doesn't scroll.
+Right now the voice assistant says "Your top option is …" while the user is still on `/symptom`, then navigates. The user wants the assistant to stay silent until `/recommendations` is fully rendered, and then speak only the **names** of the recommended categories (no descriptions/reasons).
 
-### Changes to `src/routes/symptom.tsx`
+## Changes
 
-1. **Wrap the chat transcript + composer in a single bounded container**
-   - Replace the current `mt-6 space-y-3` block (which renders the chat messages, the textarea answer card, and the loader cards) with a column layout that has a fixed height, e.g. `h-[70vh]` on desktop and `h-[calc(100vh-220px)]` on mobile, plus a card border so it reads as a panel.
+### 1. `src/routes/symptom.tsx` — stop speaking on this page
+In `runVoiceFlow`, after the recommendation is fetched and stored in `sessionStorage`:
+- Remove the current `await say("Your top option is …")` block.
+- Still store a flag in `sessionStorage` (e.g. `otcandme_voice_active = "1"`) so the next page knows to continue the voice conversation.
+- Call `navigate({ to: "/recommendations" })` immediately.
+- Do NOT call `voice.cancelAll()` (so TTS can resume on the next page); just let `setVoiceActive(false)` run in `finally`.
 
-2. **Make the messages area the only scroll surface**
-   - Inner structure:
-     - `<div class="flex flex-col ...">` (outer, fixed height)
-       - `<div class="flex-1 overflow-y-auto p-4 space-y-3">` → all chat bubbles + inline loader cards live here
-       - `<div class="border-t p-3">` → the answer textarea + Send button (sticks to the bottom of the panel, not the page)
+### 2. `src/routes/recommendations.tsx` — speak after render
+- Read `otcandme_voice_active` from `sessionStorage` on mount. If present, clear it and trigger a one-shot TTS announcement.
+- Use a `useEffect` that runs **after** the recommendation data has been loaded into state AND the category cards have mounted (depend on `recommendation` state being set; React guarantees DOM is committed before effect runs, which satisfies "fully loaded on screen").
+- Build the spoken line from category names only:
+  - 1 category: `"Here are your recommendations. The top option is {name}."`
+  - 2+ categories: `"Here are your recommendations. The top option is {name1}, followed by {name2}{, and {name3}}."`
+- Use the existing `useVoiceAssistant` hook's `speak(text)` method (same one used in `symptom.tsx`) so behavior is consistent. Guard with a `useRef` so it only fires once per page visit.
+- Add a cleanup that calls `voice.cancelAll()` on unmount so navigating away stops speech mid-sentence.
 
-3. **Auto-scroll to the newest message inside the panel**
-   - Add a `messagesEndRef` (`useRef<HTMLDivElement>`) at the bottom of the scroll area and, in a `useEffect` keyed on `chat.length`, `stage`, and `voice.interim`, call `scrollIntoView({ behavior: "smooth", block: "end" })` so new assistant/user messages and the live transcription stay visible without moving the page.
+## Technical details
+- No changes to `useVoiceAssistant`, server functions, or recommendation data shape.
+- `sessionStorage` key `otcandme_voice_active` is the handoff signal — set in `symptom.tsx`, consumed and deleted in `recommendations.tsx`.
+- Effect dependency: `[recommendation]` (the state that holds the loaded `Recommendation` object). Because effects run after commit, the cards are on screen before `speak()` is called.
+- Only category **names** are spoken; `reason`, status labels, and product details are intentionally omitted.
 
-4. **Keep the voice status bar and Stop button inside the panel header**
-   - Move the `voiceActive` status strip (with `VoiceStatus` + Stop button) to be the panel's sticky header so the Stop control is always visible while the user scrolls past messages.
-
-5. **Leave the input/landing card unchanged**
-   - The bounded chat panel only appears once `stage !== "input"` or `voiceActive` is true. The initial symptom textarea + "Start voice" CTA stays as-is.
-
-6. **Verify in preview**
-   - Run a text symptom flow with several Q&A turns → confirm the page header stays fixed and only the inner panel scrolls.
-   - Run a voice flow → confirm chat messages and the Stop button are always reachable without scrolling the page.
-   - Check mobile viewport (≤480px) → panel still fits without clipping the composer.
+## Out of scope
+- No visual/UI changes to either page.
+- No changes to the text-chat (non-voice) flow — it already just navigates silently.
