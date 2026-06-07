@@ -67,9 +67,7 @@ function SymptomPage() {
     setVoiceActive(true);
     try {
       // Greeting + ask symptom
-      await voice.speak(
-        "Hi! I'm your O T C and Me assistant. In a few words, what symptom or illness can I help you with today?",
-      );
+      await voice.speak("Hello, how can I help you today?");
       let symptomText = "";
       for (let attempt = 0; attempt < 3 && !symptomText; attempt++) {
         try {
