@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useVoiceAssistant, isVoiceSupported } from "@/hooks/useVoiceAssistant";
+import { NearbyPharmaciesDialog } from "@/components/NearbyPharmaciesDialog";
 
 export const Route = createFileRoute("/symptom")({
   head: () => ({
