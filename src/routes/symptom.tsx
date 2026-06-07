@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getActiveProfile, profileSummary, type Profile } from "@/lib/profile";
+import {
+  getActiveProfile,
+  profileSummary,
+  updateProfile,
+  type Profile,
+} from "@/lib/profile";
 import {
   getClarifyingQuestions,
   getProductDetails,
