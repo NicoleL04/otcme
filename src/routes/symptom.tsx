@@ -15,8 +15,20 @@ import {
   type Recommendation,
 } from "@/lib/ai.functions";
 import { addHistory } from "@/lib/history";
-import { ArrowLeft, ChevronDown, Send, FileText, Tag, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Send,
+  FileText,
+  Tag,
+  Loader2,
+  Mic,
+  MicOff,
+  Volume2,
+  Square,
+} from "lucide-react";
 import { toast } from "sonner";
+import { useVoiceAssistant, isVoiceSupported } from "@/hooks/useVoiceAssistant";
 
 export const Route = createFileRoute("/symptom")({
   head: () => ({
@@ -38,6 +50,9 @@ function SymptomPage() {
   const [questions, setQuestions] = useState("");
   const [answers, setAnswers] = useState("");
   const [result, setResult] = useState<Recommendation | null>(null);
+  const [voiceActive, setVoiceActive] = useState(false);
+  const voice = useVoiceAssistant();
+  const voiceSupported = isVoiceSupported();
 
   useEffect(() => {
     const p = getActiveProfile();
@@ -46,6 +61,106 @@ function SymptomPage() {
   }, [navigate]);
 
   if (!profile) return null;
+
+  const runVoiceFlow = async () => {
+    if (!profile) return;
+    setVoiceActive(true);
+    try {
+      // Greeting + ask symptom
+      await voice.speak(
+        "Hi! I'm your O T C and Me assistant. In a few words, what symptom or illness can I help you with today?",
+      );
+      let symptomText = "";
+      for (let attempt = 0; attempt < 3 && !symptomText; attempt++) {
+        try {
+          symptomText = await voice.listen();
+        } catch {
+          // ignore
+        }
+        if (!symptomText && attempt < 2) {
+          await voice.speak("Sorry, I didn't catch that. Could you say it again?");
+        }
+      }
+      if (!symptomText) {
+        await voice.speak("I'm having trouble hearing you. Let's try typing instead.");
+        setVoiceActive(false);
+        return;
+      }
+      setSymptom(symptomText);
+      await voice.speak(`Got it. You said: ${symptomText}. Let me ask you a quick follow-up.`);
+
+      // Clarifying questions
+      setStage("loading-q");
+      const qRes = await askClarify({
+        data: { profile: profileSummary(profile), symptom: symptomText },
+      });
+      setQuestions(qRes.questions);
+      setStage("clarify");
+      await voice.speak(qRes.questions);
+
+      let answerText = "";
+      for (let attempt = 0; attempt < 2 && !answerText; attempt++) {
+        try {
+          answerText = await voice.listen();
+        } catch {
+          // ignore
+        }
+        if (!answerText && attempt < 1) {
+          await voice.speak("Could you repeat that for me?");
+        }
+      }
+      setAnswers(answerText);
+      await voice.speak(
+        answerText
+          ? `Thanks. Finding the safest options for you now.`
+          : "No problem. Let me find some options based on what you told me.",
+      );
+
+      // Recommendation
+      setStage("loading-r");
+      const r = await askRec({
+        data: {
+          profile: profileSummary(profile),
+          symptom: symptomText,
+          clarification: answerText || "(no further detail)",
+        },
+      });
+      const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
+      const sorted = {
+        ...r,
+        categories: [...r.categories].sort(
+          (a, b) => (rank[a.status] ?? 99) - (rank[b.status] ?? 99),
+        ),
+      };
+      setResult(sorted);
+      setStage("result");
+
+      const top = sorted.categories[0];
+      if (top) {
+        const label =
+          top.status === "green"
+            ? "is generally safe for you"
+            : top.status === "yellow"
+              ? "may be okay, but please check with a pharmacist first"
+              : "is not recommended for you";
+        await voice.speak(
+          `Your top option is ${top.category_name}. It ${label}. ${top.reason} You can see all options on screen, or tap any card to learn more.`,
+        );
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Voice flow failed";
+      toast.error(msg);
+      await voice.speak("Sorry, something went wrong. You can continue by typing.");
+    } finally {
+      setVoiceActive(false);
+    }
+  };
+
+  const stopVoice = () => {
+    voice.stopListening();
+    voice.stopSpeaking();
+    setVoiceActive(false);
+  };
 
   const submitSymptom = async () => {
     if (!symptom.trim()) return;
@@ -143,6 +258,46 @@ function SymptomPage() {
 
         {stage === "input" && (
           <div className="mt-6 rounded-2xl border bg-card p-6 shadow-sm">
+            {voiceSupported && (
+              <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-navy">
+                      Talk to OTC&amp;Me instead
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Hands-free voice conversation — one question at a time, no typing needed.
+                    </p>
+                  </div>
+                  {voiceActive ? (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={stopVoice}
+                    >
+                      <Square className="h-4 w-4" /> Stop
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={runVoiceFlow}
+                      disabled={voiceActive}
+                    >
+                      <Mic className="h-4 w-4" /> Start voice
+                    </Button>
+                  )}
+                </div>
+                {voiceActive && (
+                  <VoiceStatus
+                    speaking={voice.speaking}
+                    listening={voice.listening}
+                    interim={voice.interim}
+                  />
+                )}
+              </div>
+            )}
             <label className="text-sm font-medium">Describe your symptom or illness</label>
             <Textarea
               autoFocus
@@ -150,10 +305,26 @@ function SymptomPage() {
               value={symptom}
               onChange={(e) => setSymptom(e.target.value)}
               className="mt-2 min-h-[100px]"
+              disabled={voiceActive}
             />
             <div className="mt-4 flex justify-end">
-              <Button onClick={submitSymptom} disabled={!symptom.trim()}>
+              <Button onClick={submitSymptom} disabled={!symptom.trim() || voiceActive}>
                 Continue <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {voiceActive && stage !== "input" && (
+          <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <VoiceStatus
+                speaking={voice.speaking}
+                listening={voice.listening}
+                interim={voice.interim}
+              />
+              <Button type="button" variant="destructive" size="sm" onClick={stopVoice}>
+                <Square className="h-4 w-4" /> Stop voice
               </Button>
             </div>
           </div>
@@ -369,6 +540,37 @@ function ProductExplorer({
         ))}
       </ul>
       <p className="mt-2 text-[11px] italic text-muted-foreground">{data.price_note}</p>
+    </div>
+  );
+}
+
+function VoiceStatus({
+  speaking,
+  listening,
+  interim,
+}: {
+  speaking: boolean;
+  listening: boolean;
+  interim: string;
+}) {
+  return (
+    <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+      {speaking ? (
+        <>
+          <Volume2 className="h-4 w-4 animate-pulse text-primary" />
+          <span>Assistant is speaking…</span>
+        </>
+      ) : listening ? (
+        <>
+          <Mic className="h-4 w-4 animate-pulse text-primary" />
+          <span>Listening{interim ? `: "${interim}"` : "…"}</span>
+        </>
+      ) : (
+        <>
+          <MicOff className="h-4 w-4" />
+          <span>Thinking…</span>
+        </>
+      )}
     </div>
   );
 }
