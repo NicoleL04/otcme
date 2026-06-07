@@ -711,35 +711,60 @@ function SymptomPage() {
 
         {stage === "loading-q" && <LoaderCard label="Thinking of clarifying questions…" />}
 
-        {(stage === "clarify" || stage === "loading-r") && (
+        {(stage === "clarify" || stage === "loading-r" || stage === "loading-q") && chat.length > 0 && (
           <div className="mt-6 space-y-3">
-            <div className="ml-auto max-w-[80%] rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
-              {symptom}
-            </div>
-            <div className="max-w-[85%] rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm">
-              <p className="mb-1 text-xs font-semibold text-primary">OTC&amp;Me Assistant</p>
-              <p className="whitespace-pre-wrap">{questions}</p>
-            </div>
-            {stage === "clarify" ? (
+            {chat.map((m, i) =>
+              m.role === "user" ? (
+                <div
+                  key={i}
+                  className="ml-auto max-w-[80%] rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground"
+                >
+                  {m.text}
+                </div>
+              ) : (
+                <div
+                  key={i}
+                  className="max-w-[85%] rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm"
+                >
+                  <p className="mb-1 text-xs font-semibold text-primary">OTC&amp;Me Assistant</p>
+                  <p className="whitespace-pre-wrap">{m.text}</p>
+                </div>
+              ),
+            )}
+            {stage === "clarify" && probeQueue.length > 0 && (
               <div className="rounded-2xl border bg-card p-4 shadow-sm">
                 <Textarea
                   autoFocus
                   placeholder="Type your answer…"
-                  value={answers}
-                  onChange={(e) => setAnswers(e.target.value)}
-                  className="min-h-[80px]"
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      submitTextAnswer();
+                    }
+                  }}
+                  className="min-h-[60px]"
                 />
-                <div className="mt-3 flex justify-end">
-                  <Button onClick={submitAnswers}>
-                    Get recommendation <Send className="h-4 w-4" />
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Question {Object.keys(probeAnswers).length + 1}
+                  </p>
+                  <Button onClick={submitTextAnswer} disabled={!textInput.trim()}>
+                    Send <Send className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-            ) : (
+            )}
+            {stage === "loading-q" && (
+              <LoaderCard label="Reviewing your answers…" />
+            )}
+            {stage === "loading-r" && (
               <LoaderCard label="Finding the safest options for you…" />
             )}
           </div>
         )}
+
 
         {stage === "result" && result && (
           <div className="mt-6 space-y-3">
