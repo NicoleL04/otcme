@@ -276,11 +276,6 @@ function SymptomPage() {
       return answer;
     };
 
-    const CANCELLED = new Error("__voice_cancelled__");
-    const checkCancel = () => {
-      if (voice.isCancelled()) throw CANCELLED;
-    };
-
     try {
       // 1. Greeting + main symptom
       const symptomText = await askOneShown("Hello, how can I help you today?", {
