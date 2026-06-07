@@ -31,6 +31,7 @@ import {
   MicOff,
   Volume2,
   Square,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useVoiceAssistant, isVoiceSupported } from "@/hooks/useVoiceAssistant";
