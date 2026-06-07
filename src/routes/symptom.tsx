@@ -482,10 +482,15 @@ function SymptomPage() {
         );
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Voice flow failed";
-      toast.error(msg);
-      await say("Sorry, something went wrong. You can continue by typing.");
-
+      if (e === CANCELLED || voice.isCancelled()) {
+        // User stopped the voice flow — exit silently.
+      } else {
+        const msg = e instanceof Error ? e.message : "Voice flow failed";
+        toast.error(msg);
+        if (!voice.isCancelled()) {
+          await say("Sorry, something went wrong. You can continue by typing.");
+        }
+      }
     } finally {
       setVoiceActive(false);
     }
@@ -493,8 +498,7 @@ function SymptomPage() {
 
 
   const stopVoice = () => {
-    voice.stopListening();
-    voice.stopSpeaking();
+    voice.cancelAll();
     setVoiceActive(false);
   };
 
