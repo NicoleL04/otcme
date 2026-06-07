@@ -44,6 +44,22 @@ export const Route = createFileRoute("/symptom")({
 
 type Stage = "input" | "clarify" | "loading-q" | "loading-r" | "result";
 
+type ChatMsg = { role: "assistant" | "user"; text: string };
+type Probe = {
+  key: string;
+  q: string;
+  // Optional handler that can transform the answer or push a follow-up probe.
+  // Return value is stored under `key` in probeAnswers. May also mutate patches.
+  handle?: (
+    answer: string,
+    ctx: {
+      profilePatch: Record<string, string>;
+      lifestylePatch: Record<string, string>;
+      pushFollowup: (p: Probe) => void;
+    },
+  ) => string;
+};
+
 function SymptomPage() {
   const navigate = useNavigate();
   const askClarify = useServerFn(getClarifyingQuestions);
@@ -56,6 +72,17 @@ function SymptomPage() {
   const [answers, setAnswers] = useState("");
   const [result, setResult] = useState<Recommendation | null>(null);
   const [voiceActive, setVoiceActive] = useState(false);
+
+  // Text-chat probing state
+  const [chat, setChat] = useState<ChatMsg[]>([]);
+  const [probeQueue, setProbeQueue] = useState<Probe[]>([]);
+  const [probeAnswers, setProbeAnswers] = useState<Record<string, string>>({});
+  const [patches, setPatches] = useState<{
+    profile: Record<string, string>;
+    lifestyle: Record<string, string>;
+  }>({ profile: {}, lifestyle: {} });
+  const [textInput, setTextInput] = useState("");
+
   const voice = useVoiceAssistant();
   const voiceSupported = isVoiceSupported();
 
@@ -66,6 +93,7 @@ function SymptomPage() {
   }, [navigate]);
 
   if (!profile) return null;
+
 
   const askOne = async (
     prompt: string,
@@ -98,6 +126,106 @@ function SymptomPage() {
   };
   const isMissing = (v?: string) =>
     !v || /^(not reported|none|n\/a|unknown)$/i.test(v.trim());
+
+  // Canonical probe list — shared by text-chat flow and voice flow.
+  const buildProbes = (p: Profile): Probe[] => {
+    const probes: Probe[] = [
+      {
+        key: "duration",
+        q: "First, how long have you been feeling this way — a few hours, a day, or longer?",
+      },
+      {
+        key: "severity",
+        q: "How would you describe it right now — mild, moderate, or severe?",
+      },
+      {
+        key: "other_symptoms",
+        q: "Are you noticing anything else along with it — like fever, nausea, or pain anywhere else?",
+      },
+      {
+        key: "tried",
+        q: "Have you already tried anything for it, like a medication or home remedy?",
+      },
+      {
+        key: "alcohol_recent",
+        q: "In the last 24 hours, have you had any alcohol?",
+        handle: (a, { pushFollowup }) => {
+          if (isAffirmative(a)) {
+            pushFollowup({
+              key: "alcohol_detail",
+              q: "Roughly how much, and how long ago was your last drink?",
+            });
+            return a;
+          }
+          return isNegative(a) ? "None in last 24h" : a;
+        },
+      },
+      {
+        key: "smoking_recent",
+        q: "Any smoking or vaping in the last 24 hours?",
+        handle: (a) => (isNegative(a) ? "None in last 24h" : a),
+      },
+      {
+        key: "drugs_recent",
+        q: "Any recreational drugs or cannabis recently? Just so I can keep you safe — no judgment.",
+        handle: (a) => (isNegative(a) ? "None in last 24h" : a),
+      },
+    ];
+
+    // Conditional probes for missing profile data
+    if (isMissing(p.allergies)) {
+      probes.push({
+        key: "_profile_allergies",
+        q: "I don't have any allergies on file for you. Are there any medications or ingredients you're allergic to?",
+        handle: (a, { profilePatch }) => {
+          profilePatch.allergies = isNegative(a) ? "None" : a;
+          return a;
+        },
+      });
+    }
+    if (isMissing(p.prescriptions)) {
+      probes.push({
+        key: "_profile_prescriptions",
+        q: "Are you currently taking any prescription medications?",
+        handle: (a, { profilePatch }) => {
+          profilePatch.prescriptions = isNegative(a) ? "None" : a;
+          return a;
+        },
+      });
+    }
+    if (!p.conditions?.length && !p.other_condition) {
+      probes.push({
+        key: "_profile_conditions",
+        q: "Do you have any ongoing health conditions I should know about, like asthma, diabetes, or high blood pressure?",
+        handle: (a, { profilePatch }) => {
+          if (!isNegative(a)) profilePatch.other_condition = a;
+          return a;
+        },
+      });
+    }
+    if (isMissing(p.lifestyle?.alcohol)) {
+      probes.push({
+        key: "_profile_alcohol",
+        q: "In general, how often do you drink alcohol — never, occasionally, or regularly?",
+        handle: (a, { lifestylePatch }) => {
+          lifestylePatch.alcohol = a;
+          return a;
+        },
+      });
+    }
+    if (isMissing(p.lifestyle?.smoking)) {
+      probes.push({
+        key: "_profile_smoking",
+        q: "And in general, do you smoke — never, formerly, or currently?",
+        handle: (a, { lifestylePatch }) => {
+          lifestylePatch.smoking = a;
+          return a;
+        },
+      });
+    }
+    return probes;
+  };
+
 
   const runVoiceFlow = async () => {
     if (!profile) return;
@@ -320,30 +448,83 @@ function SymptomPage() {
     setVoiceActive(false);
   };
 
-  const submitSymptom = async () => {
+  const submitSymptom = () => {
     if (!symptom.trim()) return;
-    setStage("loading-q");
-    try {
-      const r = await askClarify({
-        data: { profile: profileSummary(profile), symptom },
-      });
-      setQuestions(r.questions);
-      setStage("clarify");
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Something went wrong";
-      toast.error(msg);
-      setStage("input");
-    }
+    const probes = buildProbes(profile);
+    setProbeQueue(probes);
+    setProbeAnswers({});
+    setPatches({ profile: {}, lifestyle: {} });
+    setChat([
+      { role: "user", text: symptom },
+      {
+        role: "assistant",
+        text: "Thanks for sharing. I'd like to ask a few quick questions so I can point you to the safest option.",
+      },
+      { role: "assistant", text: probes[0].q },
+    ]);
+    setAnswers("");
+    setTextInput("");
+    setStage("clarify");
   };
 
-  const submitAnswers = async () => {
+  const finalizeTextFlow = async (
+    finalAnswers: Record<string, string>,
+    finalPatches: { profile: Record<string, string>; lifestyle: Record<string, string> },
+  ) => {
+    // Apply profile patches
+    let updatedProfile: Profile = profile;
+    const hasProfilePatch = Object.keys(finalPatches.profile).length > 0;
+    const hasLifestylePatch = Object.keys(finalPatches.lifestyle).length > 0;
+    if (hasProfilePatch || hasLifestylePatch) {
+      updatedProfile = {
+        ...profile,
+        ...finalPatches.profile,
+        lifestyle: {
+          smoking: profile.lifestyle?.smoking || "",
+          alcohol: profile.lifestyle?.alcohol || "",
+          drugs: profile.lifestyle?.drugs || "",
+          ...profile.lifestyle,
+          ...finalPatches.lifestyle,
+        },
+      };
+      updateProfile(profile.id, {
+        ...finalPatches.profile,
+        lifestyle: updatedProfile.lifestyle,
+      });
+      setProfile(updatedProfile);
+      setChat((c) => [
+        ...c,
+        {
+          role: "assistant",
+          text: "Thanks — I've saved that to your profile so you don't have to repeat it next time.",
+        },
+      ]);
+    }
+
+    // Build clarification text
+    const clarificationText = Object.entries(finalAnswers)
+      .filter(([k]) => !k.startsWith("_profile_"))
+      .map(([k, v]) => `${k}: ${v}`)
+      .join("\n");
+    setAnswers(clarificationText);
+
+    setStage("loading-q");
+    try {
+      const qRes = await askClarify({
+        data: { profile: profileSummary(updatedProfile), symptom },
+      });
+      setQuestions(qRes.questions);
+    } catch {
+      setQuestions("Intake completed.");
+    }
+
     setStage("loading-r");
     try {
       const r = await askRec({
         data: {
-          profile: profileSummary(profile),
+          profile: profileSummary(updatedProfile),
           symptom,
-          clarification: answers || "(no further detail)",
+          clarification: clarificationText || "(no further detail)",
         },
       });
       const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
@@ -361,6 +542,46 @@ function SymptomPage() {
       setStage("clarify");
     }
   };
+
+  const submitTextAnswer = () => {
+    const ans = textInput.trim();
+    if (!ans || probeQueue.length === 0) return;
+    const [current, ...rest] = probeQueue;
+    const followups: Probe[] = [];
+    const localProfilePatch = { ...patches.profile };
+    const localLifestylePatch = { ...patches.lifestyle };
+    const stored = current.handle
+      ? current.handle(ans, {
+          profilePatch: localProfilePatch,
+          lifestylePatch: localLifestylePatch,
+          pushFollowup: (p) => followups.push(p),
+        })
+      : ans;
+
+    const newAnswers = { ...probeAnswers, [current.key]: stored };
+    const newPatches = { profile: localProfilePatch, lifestyle: localLifestylePatch };
+    const newQueue = [...followups, ...rest];
+
+    setProbeAnswers(newAnswers);
+    setPatches(newPatches);
+    setProbeQueue(newQueue);
+    setChat((c) => [...c, { role: "user", text: ans }]);
+    setTextInput("");
+
+    if (newQueue.length > 0) {
+      setChat((c) => [...c, { role: "assistant", text: newQueue[0].q }]);
+    } else {
+      setChat((c) => [
+        ...c,
+        {
+          role: "assistant",
+          text: "Great, I have what I need. Finding the safest options for you now.",
+        },
+      ]);
+      void finalizeTextFlow(newAnswers, newPatches);
+    }
+  };
+
 
   const goSummary = () => {
     if (!result) return;
@@ -488,37 +709,66 @@ function SymptomPage() {
           </div>
         )}
 
-        {stage === "loading-q" && <LoaderCard label="Thinking of clarifying questions…" />}
+        {stage === "loading-q" && chat.length === 0 && (
+          <LoaderCard label="Thinking of clarifying questions…" />
+        )}
 
-        {(stage === "clarify" || stage === "loading-r") && (
+
+
+        {(stage === "clarify" || stage === "loading-r" || stage === "loading-q") && chat.length > 0 && (
           <div className="mt-6 space-y-3">
-            <div className="ml-auto max-w-[80%] rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground">
-              {symptom}
-            </div>
-            <div className="max-w-[85%] rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm">
-              <p className="mb-1 text-xs font-semibold text-primary">OTC&amp;Me Assistant</p>
-              <p className="whitespace-pre-wrap">{questions}</p>
-            </div>
-            {stage === "clarify" ? (
+            {chat.map((m, i) =>
+              m.role === "user" ? (
+                <div
+                  key={i}
+                  className="ml-auto max-w-[80%] rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground"
+                >
+                  {m.text}
+                </div>
+              ) : (
+                <div
+                  key={i}
+                  className="max-w-[85%] rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm"
+                >
+                  <p className="mb-1 text-xs font-semibold text-primary">OTC&amp;Me Assistant</p>
+                  <p className="whitespace-pre-wrap">{m.text}</p>
+                </div>
+              ),
+            )}
+            {stage === "clarify" && probeQueue.length > 0 && (
               <div className="rounded-2xl border bg-card p-4 shadow-sm">
                 <Textarea
                   autoFocus
                   placeholder="Type your answer…"
-                  value={answers}
-                  onChange={(e) => setAnswers(e.target.value)}
-                  className="min-h-[80px]"
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      submitTextAnswer();
+                    }
+                  }}
+                  className="min-h-[60px]"
                 />
-                <div className="mt-3 flex justify-end">
-                  <Button onClick={submitAnswers}>
-                    Get recommendation <Send className="h-4 w-4" />
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Question {Object.keys(probeAnswers).length + 1}
+                  </p>
+                  <Button onClick={submitTextAnswer} disabled={!textInput.trim()}>
+                    Send <Send className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-            ) : (
+            )}
+            {stage === "loading-q" && (
+              <LoaderCard label="Reviewing your answers…" />
+            )}
+            {stage === "loading-r" && (
               <LoaderCard label="Finding the safest options for you…" />
             )}
           </div>
         )}
+
 
         {stage === "result" && result && (
           <div className="mt-6 space-y-3">
