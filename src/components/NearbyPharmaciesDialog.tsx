@@ -63,6 +63,7 @@ export function NearbyPharmaciesDialog({ open, onOpenChange, ingredient, example
     const compute = () => {
       const result = simulateNearbyOptions(ingredient, examples);
       setOptions(result);
+      refreshSaved(result);
       setLoading(false);
     };
 
@@ -129,9 +130,21 @@ export function NearbyPharmaciesDialog({ open, onOpenChange, ingredient, example
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
-                      <span className="text-sm font-semibold text-navy">
-                        ${opt.priceUsd.toFixed(2)}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-semibold text-navy">
+                          ${opt.priceUsd.toFixed(2)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSave(opt)}
+                          aria-label={savedIds.has(opt.id) ? "Remove from wishlist" : "Add to wishlist"}
+                          className="grid h-7 w-7 place-items-center rounded-full border bg-card text-muted-foreground transition hover:border-primary hover:text-primary"
+                        >
+                          <Heart
+                            className={`h-3.5 w-3.5 ${savedIds.has(opt.id) ? "fill-primary text-primary" : ""}`}
+                          />
+                        </button>
+                      </div>
                       <span
                         className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${meta.cls}`}
                       >
