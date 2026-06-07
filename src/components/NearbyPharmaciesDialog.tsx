@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { MapPin, Loader2, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
 import { simulateNearbyOptions, type NearbyOption, type StockLevel } from "@/lib/pharmacy-simulator";
