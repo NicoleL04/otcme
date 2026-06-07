@@ -232,25 +232,58 @@ function SymptomPage() {
   const runVoiceFlow = async () => {
     if (!profile) return;
     setVoiceActive(true);
+    setChat([]);
     // Track profile patches we collect during the conversation
     const profilePatch: Partial<Profile> = {};
     const lifestylePatch: Partial<NonNullable<Profile["lifestyle"]>> = {};
 
+    // Wrappers that mirror the spoken conversation into the on-screen chat.
+    const say = async (text: string) => {
+      setChat((c) => [...c, { role: "assistant", text }]);
+      await voice.speak(text);
+    };
+    const askOneShown = async (
+      prompt: string,
+      opts: { retries?: number; rephrase?: string } = {},
+    ): Promise<string> => {
+      const retries = opts.retries ?? 1;
+      setChat((c) => [...c, { role: "assistant", text: prompt }]);
+      await voice.speak(prompt);
+      let answer = "";
+      for (let attempt = 0; attempt <= retries && !answer; attempt++) {
+        try {
+          answer = (await voice.listen()).trim();
+        } catch {
+          // ignore
+        }
+        if (!answer && attempt < retries) {
+          const r =
+            opts.rephrase ||
+            "Sorry, I didn't quite catch that. Could you say it once more?";
+          setChat((c) => [...c, { role: "assistant", text: r }]);
+          await voice.speak(r);
+        }
+      }
+      if (answer) setChat((c) => [...c, { role: "user", text: answer }]);
+      return answer;
+    };
+
     try {
       // 1. Greeting + main symptom
-      const symptomText = await askOne("Hello, how can I help you today?", {
+      const symptomText = await askOneShown("Hello, how can I help you today?", {
         retries: 2,
         rephrase: "No worries — in your own words, what's bothering you today?",
       });
       if (!symptomText) {
-        await voice.speak("I'm having trouble hearing you. Let's try typing instead.");
+        await say("I'm having trouble hearing you. Let's try typing instead.");
         setVoiceActive(false);
         return;
       }
       setSymptom(symptomText);
-      await voice.speak(
+      await say(
         "Thanks for sharing. I'd like to ask a few quick questions so I can point you to the safest option.",
       );
+
 
       // 2. Probing follow-ups — one at a time
       const probes: { key: string; q: string }[] = [
@@ -273,21 +306,21 @@ function SymptomPage() {
       ];
       const probeAnswers: Record<string, string> = {};
       for (const p of probes) {
-        const a = await askOne(p.q);
+        const a = await askOneShown(p.q);
         if (a) probeAnswers[p.key] = a;
       }
 
       // 3. Time-sensitive lifestyle — confirm one by one
-      await voice.speak(
+      await say(
         "A couple of quick lifestyle checks — these matter because they can interact with medications.",
       );
 
-      const alcoholToday = await askOne(
+      const alcoholToday = await askOneShown(
         "In the last twenty-four hours, have you had any alcohol?",
       );
       if (alcoholToday) {
         if (isAffirmative(alcoholToday)) {
-          const detail = await askOne(
+          const detail = await askOneShown(
             "Okay, roughly how much, and how long ago was your last drink?",
           );
           probeAnswers.alcohol_recent = detail || alcoholToday;
@@ -298,7 +331,7 @@ function SymptomPage() {
         }
       }
 
-      const smokeToday = await askOne(
+      const smokeToday = await askOneShown(
         "How about smoking or vaping today — anything in the last twenty-four hours?",
       );
       if (smokeToday) {
@@ -307,7 +340,7 @@ function SymptomPage() {
           : smokeToday;
       }
 
-      const drugsToday = await askOne(
+      const drugsToday = await askOneShown(
         "And any recreational drugs or cannabis recently? It's just so I can keep you safe — nothing is judged.",
       );
       if (drugsToday) {
@@ -318,31 +351,31 @@ function SymptomPage() {
 
       // 4. Fill in missing profile info on the user's behalf
       if (isMissing(profile.allergies)) {
-        const a = await askOne(
+        const a = await askOneShown(
           "I don't have any allergies on file for you. Are there any medications or ingredients you're allergic to?",
         );
         if (a) profilePatch.allergies = isNegative(a) ? "None" : a;
       }
       if (isMissing(profile.prescriptions)) {
-        const a = await askOne(
+        const a = await askOneShown(
           "Are you currently taking any prescription medications?",
         );
         if (a) profilePatch.prescriptions = isNegative(a) ? "None" : a;
       }
       if (!profile.conditions?.length && !profile.other_condition) {
-        const a = await askOne(
+        const a = await askOneShown(
           "Do you have any ongoing health conditions I should know about, like asthma, diabetes, or high blood pressure?",
         );
         if (a && !isNegative(a)) profilePatch.other_condition = a;
       }
       if (isMissing(profile.lifestyle?.alcohol)) {
-        const a = await askOne(
+        const a = await askOneShown(
           "In general, how often do you drink alcohol — never, occasionally, or regularly?",
         );
         if (a) lifestylePatch.alcohol = a;
       }
       if (isMissing(profile.lifestyle?.smoking)) {
-        const a = await askOne(
+        const a = await askOneShown(
           "And in general, do you smoke — never, formerly, or currently?",
         );
         if (a) lifestylePatch.smoking = a;
@@ -370,13 +403,15 @@ function SymptomPage() {
           lifestyle: updatedProfile.lifestyle,
         });
         setProfile(updatedProfile);
-        await voice.speak("Thanks — I've saved that to your profile so you don't have to repeat it next time.");
+        await say("Thanks — I've saved that to your profile so you don't have to repeat it next time.");
       }
 
       // 5. Confirm before searching
-      await voice.speak(
+      await say(
         "Great, I have what I need. Give me a moment to find the safest options for you.",
       );
+
+
 
       // Build a rich clarification string
       const clarificationParts: string[] = [];
@@ -430,14 +465,15 @@ function SymptomPage() {
             : top.status === "yellow"
               ? "may be okay, but please check with a pharmacist first"
               : "is not recommended for you";
-        await voice.speak(
+        await say(
           `Your top option is ${top.category_name}. It ${label}. ${top.reason} You can see all options on screen, or tap any card to learn more.`,
         );
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Voice flow failed";
       toast.error(msg);
-      await voice.speak("Sorry, something went wrong. You can continue by typing.");
+      await say("Sorry, something went wrong. You can continue by typing.");
+
     } finally {
       setVoiceActive(false);
     }
@@ -717,7 +753,7 @@ function SymptomPage() {
 
 
 
-        {(stage === "clarify" || stage === "loading-r" || stage === "loading-q") && chat.length > 0 && (
+        {(voiceActive || stage === "clarify" || stage === "loading-r" || stage === "loading-q" || (stage === "result" && chat.length > 0)) && chat.length > 0 && (
           <div className="mt-6 space-y-3">
             {chat.map((m, i) =>
               m.role === "user" ? (
