@@ -102,6 +102,8 @@ function SymptomPage() {
         ? `${top.category_name} — ${top.status === "green" ? "Safe" : top.status === "yellow" ? "Consult pharmacist" : "Not recommended"}`
         : "No recommendation",
       status: top?.status,
+      payload: result,
+      clarification: answers,
     });
     navigate({ to: "/summary" });
   };
