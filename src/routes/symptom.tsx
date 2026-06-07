@@ -550,7 +550,7 @@ function SymptomPage() {
           stage === "loading-q" ||
           stage === "loading-r" ||
           (stage === "result" && chat.length > 0)) && (
-          <div className="mt-6 flex h-[calc(100vh-220px)] max-h-[700px] min-h-[420px] flex-col overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <div className="mt-6 flex flex-col overflow-hidden rounded-2xl border bg-card shadow-sm">
             {voiceActive && (
               <div className="flex items-center justify-between gap-3 border-b border-primary/20 bg-primary/5 px-4 py-2">
                 <VoiceStatus
