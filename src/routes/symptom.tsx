@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getActiveProfile, profileSummary, type Profile } from "@/lib/profile";
+import {
+  getActiveProfile,
+  profileSummary,
+  updateProfile,
+  type Profile,
+} from "@/lib/profile";
 import {
   getClarifyingQuestions,
   getProductDetails,
@@ -62,70 +67,219 @@ function SymptomPage() {
 
   if (!profile) return null;
 
+  const askOne = async (
+    prompt: string,
+    { retries = 1, rephrase }: { retries?: number; rephrase?: string } = {},
+  ): Promise<string> => {
+    await voice.speak(prompt);
+    let answer = "";
+    for (let attempt = 0; attempt <= retries && !answer; attempt++) {
+      try {
+        answer = (await voice.listen()).trim();
+      } catch {
+        // ignore
+      }
+      if (!answer && attempt < retries) {
+        await voice.speak(
+          rephrase || "Sorry, I didn't quite catch that. Could you say it once more?",
+        );
+      }
+    }
+    return answer;
+  };
+
+  const isNegative = (s: string) => {
+    const t = s.toLowerCase();
+    return /\b(no|none|nope|nothing|haven't|have not|never|nah|negative)\b/.test(t);
+  };
+  const isAffirmative = (s: string) => {
+    const t = s.toLowerCase();
+    return /\b(yes|yeah|yep|yup|sure|correct|right|affirmative|i did|i have)\b/.test(t);
+  };
+  const isMissing = (v?: string) =>
+    !v || /^(not reported|none|n\/a|unknown)$/i.test(v.trim());
+
   const runVoiceFlow = async () => {
     if (!profile) return;
     setVoiceActive(true);
+    // Track profile patches we collect during the conversation
+    const profilePatch: Partial<Profile> = {};
+    const lifestylePatch: Partial<NonNullable<Profile["lifestyle"]>> = {};
+
     try {
-      // Greeting + ask symptom
-      await voice.speak("Hello, how can I help you today?");
-      let symptomText = "";
-      for (let attempt = 0; attempt < 3 && !symptomText; attempt++) {
-        try {
-          symptomText = await voice.listen();
-        } catch {
-          // ignore
-        }
-        if (!symptomText && attempt < 2) {
-          await voice.speak("Sorry, I didn't catch that. Could you say it again?");
-        }
-      }
+      // 1. Greeting + main symptom
+      const symptomText = await askOne("Hello, how can I help you today?", {
+        retries: 2,
+        rephrase: "No worries — in your own words, what's bothering you today?",
+      });
       if (!symptomText) {
         await voice.speak("I'm having trouble hearing you. Let's try typing instead.");
         setVoiceActive(false);
         return;
       }
       setSymptom(symptomText);
-      const ackOptions = [
-        "Thanks for sharing that. I want to make sure I help you with the right thing, so I have one quick follow-up.",
-        "Okay, I hear you. Let me ask you something quick so I can point you in the safest direction.",
-        "Got it, thank you. Just one quick thing before I look up options for you.",
-      ];
-      await voice.speak(ackOptions[Math.floor(Math.random() * ackOptions.length)]);
-
-      // Clarifying questions
-      setStage("loading-q");
-      const qRes = await askClarify({
-        data: { profile: profileSummary(profile), symptom: symptomText },
-      });
-      setQuestions(qRes.questions);
-      setStage("clarify");
-      await voice.speak(qRes.questions);
-
-      let answerText = "";
-      for (let attempt = 0; attempt < 2 && !answerText; attempt++) {
-        try {
-          answerText = await voice.listen();
-        } catch {
-          // ignore
-        }
-        if (!answerText && attempt < 1) {
-          await voice.speak("Could you repeat that for me?");
-        }
-      }
-      setAnswers(answerText);
       await voice.speak(
-        answerText
-          ? "Perfect, that's really helpful. Give me just a moment to look up the safest options for you."
-          : "No worries at all. I'll go ahead and find some options based on what you've shared.",
+        "Thanks for sharing. I'd like to ask a few quick questions so I can point you to the safest option.",
       );
 
-      // Recommendation
+      // 2. Probing follow-ups — one at a time
+      const probes: { key: string; q: string }[] = [
+        {
+          key: "duration",
+          q: "First, how long have you been feeling this way? A few hours, a day, or longer?",
+        },
+        {
+          key: "severity",
+          q: "And on a scale from mild, moderate, to severe, how would you describe it right now?",
+        },
+        {
+          key: "other_symptoms",
+          q: "Are you noticing any other symptoms along with this — for example fever, nausea, or pain anywhere else?",
+        },
+        {
+          key: "tried",
+          q: "Have you already tried anything for it, like a medication or a home remedy?",
+        },
+      ];
+      const probeAnswers: Record<string, string> = {};
+      for (const p of probes) {
+        const a = await askOne(p.q);
+        if (a) probeAnswers[p.key] = a;
+      }
+
+      // 3. Time-sensitive lifestyle — confirm one by one
+      await voice.speak(
+        "A couple of quick lifestyle checks — these matter because they can interact with medications.",
+      );
+
+      const alcoholToday = await askOne(
+        "In the last twenty-four hours, have you had any alcohol?",
+      );
+      if (alcoholToday) {
+        if (isAffirmative(alcoholToday)) {
+          const detail = await askOne(
+            "Okay, roughly how much, and how long ago was your last drink?",
+          );
+          probeAnswers.alcohol_recent = detail || alcoholToday;
+        } else if (isNegative(alcoholToday)) {
+          probeAnswers.alcohol_recent = "None in last 24h";
+        } else {
+          probeAnswers.alcohol_recent = alcoholToday;
+        }
+      }
+
+      const smokeToday = await askOne(
+        "How about smoking or vaping today — anything in the last twenty-four hours?",
+      );
+      if (smokeToday) {
+        probeAnswers.smoking_recent = isNegative(smokeToday)
+          ? "None in last 24h"
+          : smokeToday;
+      }
+
+      const drugsToday = await askOne(
+        "And any recreational drugs or cannabis recently? It's just so I can keep you safe — nothing is judged.",
+      );
+      if (drugsToday) {
+        probeAnswers.drugs_recent = isNegative(drugsToday)
+          ? "None in last 24h"
+          : drugsToday;
+      }
+
+      // 4. Fill in missing profile info on the user's behalf
+      if (isMissing(profile.allergies)) {
+        const a = await askOne(
+          "I don't have any allergies on file for you. Are there any medications or ingredients you're allergic to?",
+        );
+        if (a) profilePatch.allergies = isNegative(a) ? "None" : a;
+      }
+      if (isMissing(profile.prescriptions)) {
+        const a = await askOne(
+          "Are you currently taking any prescription medications?",
+        );
+        if (a) profilePatch.prescriptions = isNegative(a) ? "None" : a;
+      }
+      if (!profile.conditions?.length && !profile.other_condition) {
+        const a = await askOne(
+          "Do you have any ongoing health conditions I should know about, like asthma, diabetes, or high blood pressure?",
+        );
+        if (a && !isNegative(a)) profilePatch.other_condition = a;
+      }
+      if (isMissing(profile.lifestyle?.alcohol)) {
+        const a = await askOne(
+          "In general, how often do you drink alcohol — never, occasionally, or regularly?",
+        );
+        if (a) lifestylePatch.alcohol = a;
+      }
+      if (isMissing(profile.lifestyle?.smoking)) {
+        const a = await askOne(
+          "And in general, do you smoke — never, formerly, or currently?",
+        );
+        if (a) lifestylePatch.smoking = a;
+      }
+
+      // Apply profile updates locally so the recommendation reflects them
+      let updatedProfile: Profile = profile;
+      if (
+        Object.keys(profilePatch).length > 0 ||
+        Object.keys(lifestylePatch).length > 0
+      ) {
+        updatedProfile = {
+          ...profile,
+          ...profilePatch,
+          lifestyle: {
+            smoking: profile.lifestyle?.smoking || "",
+            alcohol: profile.lifestyle?.alcohol || "",
+            drugs: profile.lifestyle?.drugs || "",
+            ...profile.lifestyle,
+            ...lifestylePatch,
+          },
+        };
+        updateProfile(profile.id, {
+          ...profilePatch,
+          lifestyle: updatedProfile.lifestyle,
+        });
+        setProfile(updatedProfile);
+        await voice.speak("Thanks — I've saved that to your profile so you don't have to repeat it next time.");
+      }
+
+      // 5. Confirm before searching
+      await voice.speak(
+        "Great, I have what I need. Give me a moment to find the safest options for you.",
+      );
+
+      // Build a rich clarification string
+      const clarificationParts: string[] = [];
+      for (const p of probes) {
+        if (probeAnswers[p.key]) clarificationParts.push(`${p.key}: ${probeAnswers[p.key]}`);
+      }
+      if (probeAnswers.alcohol_recent)
+        clarificationParts.push(`alcohol_last_24h: ${probeAnswers.alcohol_recent}`);
+      if (probeAnswers.smoking_recent)
+        clarificationParts.push(`smoking_last_24h: ${probeAnswers.smoking_recent}`);
+      if (probeAnswers.drugs_recent)
+        clarificationParts.push(`drugs_last_24h: ${probeAnswers.drugs_recent}`);
+      const clarificationText = clarificationParts.join("\n");
+      setAnswers(clarificationText);
+
+      // Also fetch the model's own clarifying questions for the on-screen log
+      setStage("loading-q");
+      try {
+        const qRes = await askClarify({
+          data: { profile: profileSummary(updatedProfile), symptom: symptomText },
+        });
+        setQuestions(qRes.questions);
+      } catch {
+        setQuestions("Voice intake completed.");
+      }
+
+      // 6. Recommendation
       setStage("loading-r");
       const r = await askRec({
         data: {
-          profile: profileSummary(profile),
+          profile: profileSummary(updatedProfile),
           symptom: symptomText,
-          clarification: answerText || "(no further detail)",
+          clarification: clarificationText || "(no further detail)",
         },
       });
       const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
@@ -158,6 +312,7 @@ function SymptomPage() {
       setVoiceActive(false);
     }
   };
+
 
   const stopVoice = () => {
     voice.stopListening();
