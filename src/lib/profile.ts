@@ -37,6 +37,29 @@ export function addProfile(profile: Profile) {
   setActiveProfileId(profile.id);
 }
 
+export function updateProfile(id: string, patch: Partial<Profile>) {
+  const all = getProfiles();
+  const idx = all.findIndex((p) => p.id === id);
+  if (idx === -1) return;
+  all[idx] = { ...all[idx], ...patch, id: all[idx].id };
+  saveProfiles(all);
+}
+
+export function deleteProfile(id: string) {
+  const all = getProfiles().filter((p) => p.id !== id);
+  saveProfiles(all);
+  if (getActiveProfileId() === id) {
+    if (all[0]) setActiveProfileId(all[0].id);
+    else localStorage.removeItem(ACTIVE_KEY);
+  }
+}
+
+export function hasSelfProfile(): boolean {
+  return getProfiles().some((p) => p.is_self);
+}
+
+
+
 export function getActiveProfileId(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(ACTIVE_KEY);
