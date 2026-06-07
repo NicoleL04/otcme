@@ -483,13 +483,16 @@ function SymptomPage() {
         );
       }
     } catch (e) {
-      if (e === CANCELLED || voice.isCancelled()) {
-        // User stopped the voice flow — exit silently.
-      } else {
+      const isCancel =
+        voice.isCancelled() ||
+        (e instanceof Error && e.message === "__voice_cancelled__");
+      if (!isCancel) {
         const msg = e instanceof Error ? e.message : "Voice flow failed";
         toast.error(msg);
-        if (!voice.isCancelled()) {
+        try {
           await say("Sorry, something went wrong. You can continue by typing.");
+        } catch {
+          // ignore
         }
       }
     } finally {
