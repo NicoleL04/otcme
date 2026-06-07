@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getActiveProfile, profileSummary, type Profile } from "@/lib/profile";
+import { addHistory } from "@/lib/history";
 import {
   checkMedicationSafety,
   extractMedicationFromImage,
@@ -99,6 +100,13 @@ function SafetyPage() {
         safety: result,
       }),
     );
+    addHistory({
+      profile_id: profile.id,
+      type: "safety",
+      query: medName,
+      summary: `${result.safety_status === "Yes" ? "Safe" : result.safety_status === "Caution" ? "Caution" : "Avoid"} — ${result.explanation.split(". ")[0]}.`,
+      status: result.safety_status,
+    });
     navigate({ to: "/summary" });
   };
 
