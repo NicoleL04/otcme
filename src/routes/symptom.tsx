@@ -564,7 +564,7 @@ function SymptomPage() {
               </div>
             )}
 
-            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            <div className="max-h-[55vh] min-h-[280px] flex-1 space-y-3 overflow-y-auto p-4">
               {stage === "loading-q" && chat.length === 0 && (
                 <LoaderCard label="Thinking of clarifying questions…" />
               )}
