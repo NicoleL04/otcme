@@ -358,6 +358,9 @@ function Onboarding() {
                 <Row label="Prescriptions" value={prescriptions || "None"} />
                 <Row label="Allergies" value={allergies || "None"} />
                 <Row label="At home" value={homeMeds || "None"} />
+                <Row label="Smoking" value={smoking} />
+                <Row label="Alcohol" value={alcohol} />
+                <Row label="Other drugs" value={drugs || "None"} />
               </dl>
             </div>
           )}
