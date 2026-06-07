@@ -306,21 +306,21 @@ function SymptomPage() {
       ];
       const probeAnswers: Record<string, string> = {};
       for (const p of probes) {
-        const a = await askOne(p.q);
+        const a = await askOneShown(p.q);
         if (a) probeAnswers[p.key] = a;
       }
 
       // 3. Time-sensitive lifestyle — confirm one by one
-      await voice.speak(
+      await say(
         "A couple of quick lifestyle checks — these matter because they can interact with medications.",
       );
 
-      const alcoholToday = await askOne(
+      const alcoholToday = await askOneShown(
         "In the last twenty-four hours, have you had any alcohol?",
       );
       if (alcoholToday) {
         if (isAffirmative(alcoholToday)) {
-          const detail = await askOne(
+          const detail = await askOneShown(
             "Okay, roughly how much, and how long ago was your last drink?",
           );
           probeAnswers.alcohol_recent = detail || alcoholToday;
@@ -331,7 +331,7 @@ function SymptomPage() {
         }
       }
 
-      const smokeToday = await askOne(
+      const smokeToday = await askOneShown(
         "How about smoking or vaping today — anything in the last twenty-four hours?",
       );
       if (smokeToday) {
@@ -340,7 +340,7 @@ function SymptomPage() {
           : smokeToday;
       }
 
-      const drugsToday = await askOne(
+      const drugsToday = await askOneShown(
         "And any recreational drugs or cannabis recently? It's just so I can keep you safe — nothing is judged.",
       );
       if (drugsToday) {
@@ -351,31 +351,31 @@ function SymptomPage() {
 
       // 4. Fill in missing profile info on the user's behalf
       if (isMissing(profile.allergies)) {
-        const a = await askOne(
+        const a = await askOneShown(
           "I don't have any allergies on file for you. Are there any medications or ingredients you're allergic to?",
         );
         if (a) profilePatch.allergies = isNegative(a) ? "None" : a;
       }
       if (isMissing(profile.prescriptions)) {
-        const a = await askOne(
+        const a = await askOneShown(
           "Are you currently taking any prescription medications?",
         );
         if (a) profilePatch.prescriptions = isNegative(a) ? "None" : a;
       }
       if (!profile.conditions?.length && !profile.other_condition) {
-        const a = await askOne(
+        const a = await askOneShown(
           "Do you have any ongoing health conditions I should know about, like asthma, diabetes, or high blood pressure?",
         );
         if (a && !isNegative(a)) profilePatch.other_condition = a;
       }
       if (isMissing(profile.lifestyle?.alcohol)) {
-        const a = await askOne(
+        const a = await askOneShown(
           "In general, how often do you drink alcohol — never, occasionally, or regularly?",
         );
         if (a) lifestylePatch.alcohol = a;
       }
       if (isMissing(profile.lifestyle?.smoking)) {
-        const a = await askOne(
+        const a = await askOneShown(
           "And in general, do you smoke — never, formerly, or currently?",
         );
         if (a) lifestylePatch.smoking = a;
@@ -403,13 +403,15 @@ function SymptomPage() {
           lifestyle: updatedProfile.lifestyle,
         });
         setProfile(updatedProfile);
-        await voice.speak("Thanks — I've saved that to your profile so you don't have to repeat it next time.");
+        await say("Thanks — I've saved that to your profile so you don't have to repeat it next time.");
       }
 
       // 5. Confirm before searching
-      await voice.speak(
+      await say(
         "Great, I have what I need. Give me a moment to find the safest options for you.",
       );
+
+
 
       // Build a rich clarification string
       const clarificationParts: string[] = [];
