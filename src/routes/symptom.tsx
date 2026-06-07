@@ -642,17 +642,7 @@ function SymptomPage() {
         )}
 
 
-        {stage === "result" && result && (
-          <div className="mt-6 space-y-3">
-            <h2 className="text-lg font-semibold">Recommended categories</h2>
-            {result.categories.map((c, i) => (
-              <CategoryCard key={i} category={c} />
-            ))}
-            <Button onClick={goSummary} variant="outline" className="mt-4 w-full">
-              <FileText className="h-4 w-4" /> Generate Pharmacist Summary Card
-            </Button>
-          </div>
-        )}
+
       </main>
     </div>
   );
