@@ -1,10 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-// Google's OpenAI-compatible endpoint — accepts the same messages shape (incl. image_url parts)
-const GEMINI_URL =
-  "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-const MODEL = "gemini-2.5-pro";
+const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const MODEL = "google/gemini-2.5-flash";
 
 type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -17,8 +15,8 @@ type ChatMessage = {
 };
 
 async function callGateway(messages: ChatMessage[], jsonMode = false) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
   const body: Record<string, unknown> = {
     model: MODEL,
@@ -26,7 +24,7 @@ async function callGateway(messages: ChatMessage[], jsonMode = false) {
   };
   if (jsonMode) body.response_format = { type: "json_object" };
 
-  const res = await fetch(GEMINI_URL, {
+  const res = await fetch(GATEWAY_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -37,10 +35,8 @@ async function callGateway(messages: ChatMessage[], jsonMode = false) {
 
   if (!res.ok) {
     const text = await res.text();
-    if (res.status === 429)
-      throw new Error("Rate limit reached. Please try again in a moment.");
-    if (res.status === 401 || res.status === 403)
-      throw new Error("Gemini API key invalid or lacks access. Check GEMINI_API_KEY.");
+    if (res.status === 429) throw new Error("Rate limit reached. Please try again in a moment.");
+    if (res.status === 402) throw new Error("AI credits required. Please add credits in your workspace.");
     throw new Error(`AI request failed: ${res.status} ${text}`);
   }
 
