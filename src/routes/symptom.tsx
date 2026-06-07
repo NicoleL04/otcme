@@ -16,6 +16,7 @@ import {
   getClarifyingQuestions,
   getProductDetails,
   getRecommendation,
+  getSymptomProbes,
   type ProductList,
   type Recommendation,
 } from "@/lib/ai.functions";
