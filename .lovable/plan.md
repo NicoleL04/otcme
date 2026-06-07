@@ -1,28 +1,28 @@
 ## Plan
 
-The current symptom flow always asks the same long list of questions (duration, severity, other symptoms, tried, alcohol-24h, smoking-24h, drugs-24h, plus several profile gap-fills). It ignores what's already on file and the wording is long.
+Contain the symptom-page conversation (voice + text) in a fixed-height, internally scrollable chat window so the page itself doesn't scroll.
 
-### 1. Add an AI-generated probe step (`src/lib/ai.functions.ts`)
-- New server function `getSymptomProbes({ profile, symptom })` that returns `{ probes: { key, q }[] }`.
-- System prompt rules:
-  - Read the patient profile and the symptom.
-  - Generate **3-5** short questions, each **one short sentence, ≤12 words**.
-  - Skip anything already known in the profile (allergies, conditions, prescriptions, smoking, alcohol). Do NOT ask the user to repeat those.
-  - Always include at least one time-sensitive probe (e.g. "Taken anything for it in the last 24h?") since that's not in the profile.
-  - Vary phrasing per call so repeated visits don't feel scripted.
-  - Return strict JSON `{ "probes": [{ "key": "snake_case", "q": "..." }] }`.
+### Changes to `src/routes/symptom.tsx`
 
-### 2. Use the dynamic probes in both flows (`src/routes/symptom.tsx`)
-- Replace `buildProbes(profile)` and the inline voice probe list with a single call to `getSymptomProbes`.
-- Text flow: after the user submits the symptom, fetch probes, then run the existing one-at-a-time chat loop with those probes (no `handle` callbacks needed — just store the answer under the returned key).
-- Voice flow: after the greeting captures the symptom, fetch probes, then ask each one via `askOneShown`.
-- Loading state: show "Thinking of a few quick questions…" while probes are fetched.
-- Fallback: if the call fails, fall back to a minimal hardcoded set of 2 questions (duration, anything tried in last 24h).
+1. **Wrap the chat transcript + composer in a single bounded container**
+   - Replace the current `mt-6 space-y-3` block (which renders the chat messages, the textarea answer card, and the loader cards) with a column layout that has a fixed height, e.g. `h-[70vh]` on desktop and `h-[calc(100vh-220px)]` on mobile, plus a card border so it reads as a panel.
 
-### 3. Keep profile gap-fills minimal and only when truly missing
-- Drop the bulk of `_profile_*` probes from the static list. The AI prompt already knows the profile and will ask for missing critical info itself if relevant to the symptom.
-- Continue saving any new info the model collects back to the profile via the existing `updateProfile` path (apply patches when answers map to a `_profile_*` key returned by the model).
+2. **Make the messages area the only scroll surface**
+   - Inner structure:
+     - `<div class="flex flex-col ...">` (outer, fixed height)
+       - `<div class="flex-1 overflow-y-auto p-4 space-y-3">` → all chat bubbles + inline loader cards live here
+       - `<div class="border-t p-3">` → the answer textarea + Send button (sticks to the bottom of the panel, not the page)
 
-### 4. Verify
-- Trigger the symptom flow in preview with a profile that already lists allergies + a chronic condition → confirm those aren't re-asked, questions are short, and only 3-5 are asked.
-- Run it a second time with the same symptom → confirm wording varies.
+3. **Auto-scroll to the newest message inside the panel**
+   - Add a `messagesEndRef` (`useRef<HTMLDivElement>`) at the bottom of the scroll area and, in a `useEffect` keyed on `chat.length`, `stage`, and `voice.interim`, call `scrollIntoView({ behavior: "smooth", block: "end" })` so new assistant/user messages and the live transcription stay visible without moving the page.
+
+4. **Keep the voice status bar and Stop button inside the panel header**
+   - Move the `voiceActive` status strip (with `VoiceStatus` + Stop button) to be the panel's sticky header so the Stop control is always visible while the user scrolls past messages.
+
+5. **Leave the input/landing card unchanged**
+   - The bounded chat panel only appears once `stage !== "input"` or `voiceActive` is true. The initial symptom textarea + "Start voice" CTA stays as-is.
+
+6. **Verify in preview**
+   - Run a text symptom flow with several Q&A turns → confirm the page header stays fixed and only the inner panel scrolls.
+   - Run a voice flow → confirm chat messages and the Stop button are always reachable without scrolling the page.
+   - Check mobile viewport (≤480px) → panel still fits without clipping the composer.
