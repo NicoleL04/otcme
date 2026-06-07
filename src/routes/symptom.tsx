@@ -803,6 +803,7 @@ function LoaderCard({ label }: { label: string }) {
 
 function CategoryCard({ category }: { category: Recommendation["categories"][number] }) {
   const [open, setOpen] = useState(false);
+  const [nearbyOpen, setNearbyOpen] = useState(false);
   const styles = {
     green: {
       border: "border-l-success",
