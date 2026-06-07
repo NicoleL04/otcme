@@ -16,6 +16,7 @@ import {
   getClarifyingQuestions,
   getProductDetails,
   getRecommendation,
+  getSymptomProbes,
   type ProductList,
   type Recommendation,
 } from "@/lib/ai.functions";
@@ -66,6 +67,7 @@ function SymptomPage() {
   const navigate = useNavigate();
   const askClarify = useServerFn(getClarifyingQuestions);
   const askRec = useServerFn(getRecommendation);
+  const askProbes = useServerFn(getSymptomProbes);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stage, setStage] = useState<Stage>("input");
@@ -97,136 +99,24 @@ function SymptomPage() {
   if (!profile) return null;
 
 
-  const askOne = async (
-    prompt: string,
-    { retries = 1, rephrase }: { retries?: number; rephrase?: string } = {},
-  ): Promise<string> => {
-    await voice.speak(prompt);
-    let answer = "";
-    for (let attempt = 0; attempt <= retries && !answer; attempt++) {
-      try {
-        answer = (await voice.listen()).trim();
-      } catch {
-        // ignore
-      }
-      if (!answer && attempt < retries) {
-        await voice.speak(
-          rephrase || "Sorry, I didn't quite catch that. Could you say it once more?",
-        );
-      }
+
+  // Minimal fallback probes if the AI probe call fails.
+  const fallbackProbes = (): Probe[] => [
+    { key: "duration", q: "How long has this been going on?" },
+    { key: "taken_last_24h", q: "Taken anything for it in the last 24 hours?" },
+  ];
+
+  const fetchProbes = async (p: Profile, symptomText: string): Promise<Probe[]> => {
+    try {
+      const res = await askProbes({
+        data: { profile: profileSummary(p), symptom: symptomText },
+      });
+      return res.probes.map((pr) => ({ key: pr.key, q: pr.q }));
+    } catch {
+      return fallbackProbes();
     }
-    return answer;
   };
 
-  const isNegative = (s: string) => {
-    const t = s.toLowerCase();
-    return /\b(no|none|nope|nothing|haven't|have not|never|nah|negative)\b/.test(t);
-  };
-  const isAffirmative = (s: string) => {
-    const t = s.toLowerCase();
-    return /\b(yes|yeah|yep|yup|sure|correct|right|affirmative|i did|i have)\b/.test(t);
-  };
-  const isMissing = (v?: string) =>
-    !v || /^(not reported|none|n\/a|unknown)$/i.test(v.trim());
-
-  // Canonical probe list — shared by text-chat flow and voice flow.
-  const buildProbes = (p: Profile): Probe[] => {
-    const probes: Probe[] = [
-      {
-        key: "duration",
-        q: "First, how long have you been feeling this way — a few hours, a day, or longer?",
-      },
-      {
-        key: "severity",
-        q: "How would you describe it right now — mild, moderate, or severe?",
-      },
-      {
-        key: "other_symptoms",
-        q: "Are you noticing anything else along with it — like fever, nausea, or pain anywhere else?",
-      },
-      {
-        key: "tried",
-        q: "Have you already tried anything for it, like a medication or home remedy?",
-      },
-      {
-        key: "alcohol_recent",
-        q: "In the last 24 hours, have you had any alcohol?",
-        handle: (a, { pushFollowup }) => {
-          if (isAffirmative(a)) {
-            pushFollowup({
-              key: "alcohol_detail",
-              q: "Roughly how much, and how long ago was your last drink?",
-            });
-            return a;
-          }
-          return isNegative(a) ? "None in last 24h" : a;
-        },
-      },
-      {
-        key: "smoking_recent",
-        q: "Any smoking or vaping in the last 24 hours?",
-        handle: (a) => (isNegative(a) ? "None in last 24h" : a),
-      },
-      {
-        key: "drugs_recent",
-        q: "Any recreational drugs or cannabis recently? Just so I can keep you safe — no judgment.",
-        handle: (a) => (isNegative(a) ? "None in last 24h" : a),
-      },
-    ];
-
-    // Conditional probes for missing profile data
-    if (isMissing(p.allergies)) {
-      probes.push({
-        key: "_profile_allergies",
-        q: "I don't have any allergies on file for you. Are there any medications or ingredients you're allergic to?",
-        handle: (a, { profilePatch }) => {
-          profilePatch.allergies = isNegative(a) ? "None" : a;
-          return a;
-        },
-      });
-    }
-    if (isMissing(p.prescriptions)) {
-      probes.push({
-        key: "_profile_prescriptions",
-        q: "Are you currently taking any prescription medications?",
-        handle: (a, { profilePatch }) => {
-          profilePatch.prescriptions = isNegative(a) ? "None" : a;
-          return a;
-        },
-      });
-    }
-    if (!p.conditions?.length && !p.other_condition) {
-      probes.push({
-        key: "_profile_conditions",
-        q: "Do you have any ongoing health conditions I should know about, like asthma, diabetes, or high blood pressure?",
-        handle: (a, { profilePatch }) => {
-          if (!isNegative(a)) profilePatch.other_condition = a;
-          return a;
-        },
-      });
-    }
-    if (isMissing(p.lifestyle?.alcohol)) {
-      probes.push({
-        key: "_profile_alcohol",
-        q: "In general, how often do you drink alcohol — never, occasionally, or regularly?",
-        handle: (a, { lifestylePatch }) => {
-          lifestylePatch.alcohol = a;
-          return a;
-        },
-      });
-    }
-    if (isMissing(p.lifestyle?.smoking)) {
-      probes.push({
-        key: "_profile_smoking",
-        q: "And in general, do you smoke — never, formerly, or currently?",
-        handle: (a, { lifestylePatch }) => {
-          lifestylePatch.smoking = a;
-          return a;
-        },
-      });
-    }
-    return probes;
-  };
 
 
   const runVoiceFlow = async () => {
@@ -234,9 +124,8 @@ function SymptomPage() {
     voice.resetCancel();
     setVoiceActive(true);
     setChat([]);
-    // Track profile patches we collect during the conversation
-    const profilePatch: Partial<Profile> = {};
-    const lifestylePatch: Partial<NonNullable<Profile["lifestyle"]>> = {};
+
+
 
     // Wrappers that mirror the spoken conversation into the on-screen chat.
     const say = async (text: string) => {
@@ -293,126 +182,17 @@ function SymptomPage() {
       );
 
 
-      // 2. Probing follow-ups — one at a time
-      const probes: { key: string; q: string }[] = [
-        {
-          key: "duration",
-          q: "First, how long have you been feeling this way? A few hours, a day, or longer?",
-        },
-        {
-          key: "severity",
-          q: "And on a scale from mild, moderate, to severe, how would you describe it right now?",
-        },
-        {
-          key: "other_symptoms",
-          q: "Are you noticing any other symptoms along with this — for example fever, nausea, or pain anywhere else?",
-        },
-        {
-          key: "tried",
-          q: "Have you already tried anything for it, like a medication or a home remedy?",
-        },
-      ];
+      // 2. Dynamic, profile-aware probes — short, varied, skip what's known.
+      const probes = await fetchProbes(profile, symptomText);
+      if (voice.isCancelled()) throw new Error("__voice_cancelled__");
       const probeAnswers: Record<string, string> = {};
       for (const p of probes) {
         const a = await askOneShown(p.q);
         if (a) probeAnswers[p.key] = a;
       }
 
-      // 3. Time-sensitive lifestyle — confirm one by one
-      await say(
-        "A couple of quick lifestyle checks — these matter because they can interact with medications.",
-      );
+      const updatedProfile: Profile = profile;
 
-      const alcoholToday = await askOneShown(
-        "In the last twenty-four hours, have you had any alcohol?",
-      );
-      if (alcoholToday) {
-        if (isAffirmative(alcoholToday)) {
-          const detail = await askOneShown(
-            "Okay, roughly how much, and how long ago was your last drink?",
-          );
-          probeAnswers.alcohol_recent = detail || alcoholToday;
-        } else if (isNegative(alcoholToday)) {
-          probeAnswers.alcohol_recent = "None in last 24h";
-        } else {
-          probeAnswers.alcohol_recent = alcoholToday;
-        }
-      }
-
-      const smokeToday = await askOneShown(
-        "How about smoking or vaping today — anything in the last twenty-four hours?",
-      );
-      if (smokeToday) {
-        probeAnswers.smoking_recent = isNegative(smokeToday)
-          ? "None in last 24h"
-          : smokeToday;
-      }
-
-      const drugsToday = await askOneShown(
-        "And any recreational drugs or cannabis recently? It's just so I can keep you safe — nothing is judged.",
-      );
-      if (drugsToday) {
-        probeAnswers.drugs_recent = isNegative(drugsToday)
-          ? "None in last 24h"
-          : drugsToday;
-      }
-
-      // 4. Fill in missing profile info on the user's behalf
-      if (isMissing(profile.allergies)) {
-        const a = await askOneShown(
-          "I don't have any allergies on file for you. Are there any medications or ingredients you're allergic to?",
-        );
-        if (a) profilePatch.allergies = isNegative(a) ? "None" : a;
-      }
-      if (isMissing(profile.prescriptions)) {
-        const a = await askOneShown(
-          "Are you currently taking any prescription medications?",
-        );
-        if (a) profilePatch.prescriptions = isNegative(a) ? "None" : a;
-      }
-      if (!profile.conditions?.length && !profile.other_condition) {
-        const a = await askOneShown(
-          "Do you have any ongoing health conditions I should know about, like asthma, diabetes, or high blood pressure?",
-        );
-        if (a && !isNegative(a)) profilePatch.other_condition = a;
-      }
-      if (isMissing(profile.lifestyle?.alcohol)) {
-        const a = await askOneShown(
-          "In general, how often do you drink alcohol — never, occasionally, or regularly?",
-        );
-        if (a) lifestylePatch.alcohol = a;
-      }
-      if (isMissing(profile.lifestyle?.smoking)) {
-        const a = await askOneShown(
-          "And in general, do you smoke — never, formerly, or currently?",
-        );
-        if (a) lifestylePatch.smoking = a;
-      }
-
-      // Apply profile updates locally so the recommendation reflects them
-      let updatedProfile: Profile = profile;
-      if (
-        Object.keys(profilePatch).length > 0 ||
-        Object.keys(lifestylePatch).length > 0
-      ) {
-        updatedProfile = {
-          ...profile,
-          ...profilePatch,
-          lifestyle: {
-            smoking: profile.lifestyle?.smoking || "",
-            alcohol: profile.lifestyle?.alcohol || "",
-            drugs: profile.lifestyle?.drugs || "",
-            ...profile.lifestyle,
-            ...lifestylePatch,
-          },
-        };
-        updateProfile(profile.id, {
-          ...profilePatch,
-          lifestyle: updatedProfile.lifestyle,
-        });
-        setProfile(updatedProfile);
-        await say("Thanks — I've saved that to your profile so you don't have to repeat it next time.");
-      }
 
       // 5. Confirm before searching
       await say(
@@ -501,22 +281,30 @@ function SymptomPage() {
     setVoiceActive(false);
   };
 
-  const submitSymptom = () => {
+  const submitSymptom = async () => {
     if (!symptom.trim()) return;
-    const probes = buildProbes(profile);
-    setProbeQueue(probes);
     setProbeAnswers({});
     setPatches({ profile: {}, lifestyle: {} });
     setChat([
       { role: "user", text: symptom },
       {
         role: "assistant",
-        text: "Thanks for sharing. I'd like to ask a few quick questions so I can point you to the safest option.",
+        text: "Thanks. Thinking of a few quick questions…",
       },
-      { role: "assistant", text: probes[0].q },
     ]);
     setAnswers("");
     setTextInput("");
+    setStage("loading-q");
+    const probes = await fetchProbes(profile, symptom);
+    setProbeQueue(probes);
+    setChat((c) => [
+      ...c.filter((m) => m.text !== "Thanks. Thinking of a few quick questions…"),
+      {
+        role: "assistant",
+        text: "Thanks for sharing. A few quick questions so I can point you to the safest option.",
+      },
+      { role: "assistant", text: probes[0].q },
+    ]);
     setStage("clarify");
   };
 
