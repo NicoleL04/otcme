@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
-import { Button } from "@/components/ui/button";
 import { getActiveProfile, type Profile } from "@/lib/profile";
-import { Pill, Search, ShieldCheck } from "lucide-react";
+import { getHistoryForProfile, type HistoryEntry } from "@/lib/history";
+import { Clock, Pill, Search, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -23,6 +23,7 @@ function Home() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ready, setReady] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   useEffect(() => {
     const p = getActiveProfile();
@@ -30,6 +31,7 @@ function Home() {
       navigate({ to: "/onboarding" });
     } else {
       setProfile(p);
+      setHistory(getHistoryForProfile(p.id).slice(0, 5));
       setReady(true);
     }
   }, [navigate]);
