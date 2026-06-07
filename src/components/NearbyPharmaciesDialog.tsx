@@ -34,6 +34,26 @@ const STOCK_META: Record<StockLevel, { label: string; cls: string; icon: ReactNo
 export function NearbyPharmaciesDialog({ open, onOpenChange, ingredient, examples }: Props) {
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<NearbyOption[] | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+
+  const refreshSaved = (opts: NearbyOption[]) => {
+    const p = getActiveProfile();
+    if (!p) return;
+    setSavedIds(new Set(opts.filter((o) => isInWishlist(p.id, ingredient, o)).map((o) => o.id)));
+  };
+
+  const handleToggleSave = (opt: NearbyOption) => {
+    const p = getActiveProfile();
+    if (!p) return;
+    const nowSaved = toggleWishlist(p.id, ingredient, opt);
+    setSavedIds((prev) => {
+      const next = new Set(prev);
+      if (nowSaved) next.add(opt.id);
+      else next.delete(opt.id);
+      return next;
+    });
+    toast.success(nowSaved ? "Saved to wishlist" : "Removed from wishlist");
+  };
 
   useEffect(() => {
     if (!open) return;

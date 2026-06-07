@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WishlistRouteImport } from './routes/wishlist'
 import { Route as SymptomRouteImport } from './routes/symptom'
 import { Route as SummaryRouteImport } from './routes/summary'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -17,6 +18,11 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HistoryIdRouteImport } from './routes/history.$id'
 
+const WishlistRoute = WishlistRouteImport.update({
+  id: '/wishlist',
+  path: '/wishlist',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SymptomRoute = SymptomRouteImport.update({
   id: '/symptom',
   path: '/symptom',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/summary': typeof SummaryRoute
   '/symptom': typeof SymptomRoute
+  '/wishlist': typeof WishlistRoute
   '/history/$id': typeof HistoryIdRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/summary': typeof SummaryRoute
   '/symptom': typeof SymptomRoute
+  '/wishlist': typeof WishlistRoute
   '/history/$id': typeof HistoryIdRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/summary': typeof SummaryRoute
   '/symptom': typeof SymptomRoute
+  '/wishlist': typeof WishlistRoute
   '/history/$id': typeof HistoryIdRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/summary'
     | '/symptom'
+    | '/wishlist'
     | '/history/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/summary'
     | '/symptom'
+    | '/wishlist'
     | '/history/$id'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/summary'
     | '/symptom'
+    | '/wishlist'
     | '/history/$id'
   fileRoutesById: FileRoutesById
 }
@@ -118,11 +130,19 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SummaryRoute: typeof SummaryRoute
   SymptomRoute: typeof SymptomRoute
+  WishlistRoute: typeof WishlistRoute
   HistoryIdRoute: typeof HistoryIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/wishlist': {
+      id: '/wishlist'
+      path: '/wishlist'
+      fullPath: '/wishlist'
+      preLoaderRoute: typeof WishlistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/symptom': {
       id: '/symptom'
       path: '/symptom'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SummaryRoute: SummaryRoute,
   SymptomRoute: SymptomRoute,
+  WishlistRoute: WishlistRoute,
   HistoryIdRoute: HistoryIdRoute,
 }
 export const routeTree = rootRouteImport
