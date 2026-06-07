@@ -50,6 +50,9 @@ function SymptomPage() {
   const [questions, setQuestions] = useState("");
   const [answers, setAnswers] = useState("");
   const [result, setResult] = useState<Recommendation | null>(null);
+  const [voiceActive, setVoiceActive] = useState(false);
+  const voice = useVoiceAssistant();
+  const voiceSupported = isVoiceSupported();
 
   useEffect(() => {
     const p = getActiveProfile();
@@ -58,6 +61,106 @@ function SymptomPage() {
   }, [navigate]);
 
   if (!profile) return null;
+
+  const runVoiceFlow = async () => {
+    if (!profile) return;
+    setVoiceActive(true);
+    try {
+      // Greeting + ask symptom
+      await voice.speak(
+        "Hi! I'm your O T C and Me assistant. In a few words, what symptom or illness can I help you with today?",
+      );
+      let symptomText = "";
+      for (let attempt = 0; attempt < 3 && !symptomText; attempt++) {
+        try {
+          symptomText = await voice.listen();
+        } catch {
+          // ignore
+        }
+        if (!symptomText && attempt < 2) {
+          await voice.speak("Sorry, I didn't catch that. Could you say it again?");
+        }
+      }
+      if (!symptomText) {
+        await voice.speak("I'm having trouble hearing you. Let's try typing instead.");
+        setVoiceActive(false);
+        return;
+      }
+      setSymptom(symptomText);
+      await voice.speak(`Got it. You said: ${symptomText}. Let me ask you a quick follow-up.`);
+
+      // Clarifying questions
+      setStage("loading-q");
+      const qRes = await askClarify({
+        data: { profile: profileSummary(profile), symptom: symptomText },
+      });
+      setQuestions(qRes.questions);
+      setStage("clarify");
+      await voice.speak(qRes.questions);
+
+      let answerText = "";
+      for (let attempt = 0; attempt < 2 && !answerText; attempt++) {
+        try {
+          answerText = await voice.listen();
+        } catch {
+          // ignore
+        }
+        if (!answerText && attempt < 1) {
+          await voice.speak("Could you repeat that for me?");
+        }
+      }
+      setAnswers(answerText);
+      await voice.speak(
+        answerText
+          ? `Thanks. Finding the safest options for you now.`
+          : "No problem. Let me find some options based on what you told me.",
+      );
+
+      // Recommendation
+      setStage("loading-r");
+      const r = await askRec({
+        data: {
+          profile: profileSummary(profile),
+          symptom: symptomText,
+          clarification: answerText || "(no further detail)",
+        },
+      });
+      const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
+      const sorted = {
+        ...r,
+        categories: [...r.categories].sort(
+          (a, b) => (rank[a.status] ?? 99) - (rank[b.status] ?? 99),
+        ),
+      };
+      setResult(sorted);
+      setStage("result");
+
+      const top = sorted.categories[0];
+      if (top) {
+        const label =
+          top.status === "green"
+            ? "is generally safe for you"
+            : top.status === "yellow"
+              ? "may be okay, but please check with a pharmacist first"
+              : "is not recommended for you";
+        await voice.speak(
+          `Your top option is ${top.category_name}. It ${label}. ${top.reason} You can see all options on screen, or tap any card to learn more.`,
+        );
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Voice flow failed";
+      toast.error(msg);
+      await voice.speak("Sorry, something went wrong. You can continue by typing.");
+    } finally {
+      setVoiceActive(false);
+    }
+  };
+
+  const stopVoice = () => {
+    voice.stopListening();
+    voice.stopSpeaking();
+    setVoiceActive(false);
+  };
 
   const submitSymptom = async () => {
     if (!symptom.trim()) return;
