@@ -249,21 +249,26 @@ function SymptomPage() {
       opts: { retries?: number; rephrase?: string } = {},
     ): Promise<string> => {
       const retries = opts.retries ?? 1;
+      if (voice.isCancelled()) return "";
       setChat((c) => [...c, { role: "assistant", text: prompt }]);
       await voice.speak(prompt);
+      if (voice.isCancelled()) return "";
       let answer = "";
       for (let attempt = 0; attempt <= retries && !answer; attempt++) {
+        if (voice.isCancelled()) return "";
         try {
           answer = (await voice.listen()).trim();
         } catch {
           // ignore
         }
+        if (voice.isCancelled()) return "";
         if (!answer && attempt < retries) {
           const r =
             opts.rephrase ||
             "Sorry, I didn't quite catch that. Could you say it once more?";
           setChat((c) => [...c, { role: "assistant", text: r }]);
           await voice.speak(r);
+          if (voice.isCancelled()) return "";
         }
       }
       if (answer) setChat((c) => [...c, { role: "user", text: answer }]);
