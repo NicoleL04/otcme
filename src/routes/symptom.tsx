@@ -231,6 +231,7 @@ function SymptomPage() {
 
   const runVoiceFlow = async () => {
     if (!profile) return;
+    voice.resetCancel();
     setVoiceActive(true);
     setChat([]);
     // Track profile patches we collect during the conversation
@@ -239,6 +240,7 @@ function SymptomPage() {
 
     // Wrappers that mirror the spoken conversation into the on-screen chat.
     const say = async (text: string) => {
+      if (voice.isCancelled()) return;
       setChat((c) => [...c, { role: "assistant", text }]);
       await voice.speak(text);
     };
