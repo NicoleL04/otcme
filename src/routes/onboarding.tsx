@@ -31,6 +31,7 @@ const GENDERS = ["Male", "Female", "Other", "Prefer not to say"];
 function Onboarding() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
+  const [selfTaken, setSelfTaken] = useState(false);
   const [isSelf, setIsSelf] = useState<boolean | null>(null);
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
@@ -43,6 +44,14 @@ function Onboarding() {
   const [prescriptions, setPrescriptions] = useState("");
   const [allergies, setAllergies] = useState("");
   const [homeMeds, setHomeMeds] = useState("");
+
+  useEffect(() => {
+    const taken = hasSelfProfile();
+    setSelfTaken(taken);
+    if (taken) setIsSelf(false);
+  }, []);
+
+
 
   const finalName = isSelf ? "Myself" : name.trim() || "Loved One";
 
@@ -108,14 +117,17 @@ function Onboarding() {
               </p>
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <button
-                  onClick={() => setIsSelf(true)}
+                  onClick={() => !selfTaken && setIsSelf(true)}
+                  disabled={selfTaken}
                   className={`rounded-xl border p-5 text-left transition ${
                     isSelf === true ? "border-primary bg-primary/5" : "hover:border-primary/50"
-                  }`}
+                  } ${selfTaken ? "cursor-not-allowed opacity-50 hover:border-input" : ""}`}
                 >
                   <p className="font-semibold">Myself</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Personal profile for your own use.
+                    {selfTaken
+                      ? "You already have a personal profile. Edit it in Settings."
+                      : "Personal profile for your own use."}
                   </p>
                 </button>
                 <button
