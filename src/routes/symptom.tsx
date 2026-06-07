@@ -709,7 +709,11 @@ function SymptomPage() {
           </div>
         )}
 
-        {stage === "loading-q" && <LoaderCard label="Thinking of clarifying questions…" />}
+        {stage === "loading-q" && chat.length === 0 && (
+          <LoaderCard label="Thinking of clarifying questions…" />
+        )}
+
+
 
         {(stage === "clarify" || stage === "loading-r" || stage === "loading-q") && chat.length > 0 && (
           <div className="mt-6 space-y-3">
