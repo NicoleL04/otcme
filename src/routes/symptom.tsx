@@ -214,126 +214,17 @@ function SymptomPage() {
       );
 
 
-      // 2. Probing follow-ups — one at a time
-      const probes: { key: string; q: string }[] = [
-        {
-          key: "duration",
-          q: "First, how long have you been feeling this way? A few hours, a day, or longer?",
-        },
-        {
-          key: "severity",
-          q: "And on a scale from mild, moderate, to severe, how would you describe it right now?",
-        },
-        {
-          key: "other_symptoms",
-          q: "Are you noticing any other symptoms along with this — for example fever, nausea, or pain anywhere else?",
-        },
-        {
-          key: "tried",
-          q: "Have you already tried anything for it, like a medication or a home remedy?",
-        },
-      ];
+      // 2. Dynamic, profile-aware probes — short, varied, skip what's known.
+      const probes = await fetchProbes(profile, symptomText);
+      if (voice.isCancelled()) throw new Error("__voice_cancelled__");
       const probeAnswers: Record<string, string> = {};
       for (const p of probes) {
         const a = await askOneShown(p.q);
         if (a) probeAnswers[p.key] = a;
       }
 
-      // 3. Time-sensitive lifestyle — confirm one by one
-      await say(
-        "A couple of quick lifestyle checks — these matter because they can interact with medications.",
-      );
+      const updatedProfile: Profile = profile;
 
-      const alcoholToday = await askOneShown(
-        "In the last twenty-four hours, have you had any alcohol?",
-      );
-      if (alcoholToday) {
-        if (isAffirmative(alcoholToday)) {
-          const detail = await askOneShown(
-            "Okay, roughly how much, and how long ago was your last drink?",
-          );
-          probeAnswers.alcohol_recent = detail || alcoholToday;
-        } else if (isNegative(alcoholToday)) {
-          probeAnswers.alcohol_recent = "None in last 24h";
-        } else {
-          probeAnswers.alcohol_recent = alcoholToday;
-        }
-      }
-
-      const smokeToday = await askOneShown(
-        "How about smoking or vaping today — anything in the last twenty-four hours?",
-      );
-      if (smokeToday) {
-        probeAnswers.smoking_recent = isNegative(smokeToday)
-          ? "None in last 24h"
-          : smokeToday;
-      }
-
-      const drugsToday = await askOneShown(
-        "And any recreational drugs or cannabis recently? It's just so I can keep you safe — nothing is judged.",
-      );
-      if (drugsToday) {
-        probeAnswers.drugs_recent = isNegative(drugsToday)
-          ? "None in last 24h"
-          : drugsToday;
-      }
-
-      // 4. Fill in missing profile info on the user's behalf
-      if (isMissing(profile.allergies)) {
-        const a = await askOneShown(
-          "I don't have any allergies on file for you. Are there any medications or ingredients you're allergic to?",
-        );
-        if (a) profilePatch.allergies = isNegative(a) ? "None" : a;
-      }
-      if (isMissing(profile.prescriptions)) {
-        const a = await askOneShown(
-          "Are you currently taking any prescription medications?",
-        );
-        if (a) profilePatch.prescriptions = isNegative(a) ? "None" : a;
-      }
-      if (!profile.conditions?.length && !profile.other_condition) {
-        const a = await askOneShown(
-          "Do you have any ongoing health conditions I should know about, like asthma, diabetes, or high blood pressure?",
-        );
-        if (a && !isNegative(a)) profilePatch.other_condition = a;
-      }
-      if (isMissing(profile.lifestyle?.alcohol)) {
-        const a = await askOneShown(
-          "In general, how often do you drink alcohol — never, occasionally, or regularly?",
-        );
-        if (a) lifestylePatch.alcohol = a;
-      }
-      if (isMissing(profile.lifestyle?.smoking)) {
-        const a = await askOneShown(
-          "And in general, do you smoke — never, formerly, or currently?",
-        );
-        if (a) lifestylePatch.smoking = a;
-      }
-
-      // Apply profile updates locally so the recommendation reflects them
-      let updatedProfile: Profile = profile;
-      if (
-        Object.keys(profilePatch).length > 0 ||
-        Object.keys(lifestylePatch).length > 0
-      ) {
-        updatedProfile = {
-          ...profile,
-          ...profilePatch,
-          lifestyle: {
-            smoking: profile.lifestyle?.smoking || "",
-            alcohol: profile.lifestyle?.alcohol || "",
-            drugs: profile.lifestyle?.drugs || "",
-            ...profile.lifestyle,
-            ...lifestylePatch,
-          },
-        };
-        updateProfile(profile.id, {
-          ...profilePatch,
-          lifestyle: updatedProfile.lifestyle,
-        });
-        setProfile(updatedProfile);
-        await say("Thanks — I've saved that to your profile so you don't have to repeat it next time.");
-      }
 
       // 5. Confirm before searching
       await say(
