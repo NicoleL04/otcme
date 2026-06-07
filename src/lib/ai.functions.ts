@@ -77,6 +77,55 @@ ${data.profile}`,
     return { questions: content as string };
   });
 
+const probesSchema = z.object({
+  probes: z
+    .array(
+      z.object({
+        key: z.string().min(1),
+        q: z.string().min(1),
+      }),
+    )
+    .min(1)
+    .max(5),
+});
+
+/** Generate short, profile-aware probe questions for the symptom flow. */
+export const getSymptomProbes = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      profile: z.string(),
+      symptom: z.string().min(1),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const content = await callGateway(
+      [
+        {
+          role: "system",
+          content: `You are a clinical pharmacist assistant gathering quick context before recommending an OTC medication.
+
+Generate 3 to 5 SHORT follow-up questions about the symptom. Rules:
+- Each question is ONE sentence, ideally 6-12 words, plain conversational English.
+- DO NOT ask about anything already documented in the patient profile below (allergies, chronic conditions, prescription meds, smoking, alcohol, drug use, age, gender, weight). If a field shows a value other than "None", "Not reported", or empty, treat it as known.
+- ALWAYS include at least one time-sensitive question that the static profile cannot capture (e.g. duration, severity right now, anything already taken in the last 24 hours, recent fever, pregnancy/breastfeeding if relevant).
+- Tailor remaining questions to the specific symptom — do not use a fixed template.
+- Vary phrasing across calls; do not always start the same way.
+- Use snake_case keys that describe the question (e.g. "duration", "severity_now", "taken_last_24h").
+
+Output ONLY valid JSON:
+{ "probes": [ { "key": "snake_case_key", "q": "Short question?" } ] }
+
+Patient profile:
+${data.profile}`,
+        },
+        { role: "user", content: `Symptom: ${data.symptom}` },
+      ],
+      true,
+    );
+    return probesSchema.parse(parseJson(content));
+  });
+
+
 const recommendationSchema = z.object({
   categories: z.array(
     z.object({
