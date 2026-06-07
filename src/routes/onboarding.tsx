@@ -44,6 +44,9 @@ function Onboarding() {
   const [prescriptions, setPrescriptions] = useState("");
   const [allergies, setAllergies] = useState("");
   const [homeMeds, setHomeMeds] = useState("");
+  const [smoking, setSmoking] = useState("Never");
+  const [alcohol, setAlcohol] = useState("None");
+  const [drugs, setDrugs] = useState("None");
 
   useEffect(() => {
     const taken = hasSelfProfile();
@@ -73,6 +76,11 @@ function Onboarding() {
       prescriptions: prescriptions.trim(),
       allergies: allergies.trim(),
       home_meds: homeMeds.trim(),
+      lifestyle: {
+        smoking: smoking.trim(),
+        alcohol: alcohol.trim(),
+        drugs: drugs.trim(),
+      },
       created_at: Date.now(),
     };
     addProfile(profile);
