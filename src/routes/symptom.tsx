@@ -73,7 +73,14 @@ function SymptomPage() {
           clarification: answers || "(no further detail)",
         },
       });
-      setResult(r);
+      const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
+      const sorted = {
+        ...r,
+        categories: [...r.categories].sort(
+          (a, b) => (rank[a.status] ?? 99) - (rank[b.status] ?? 99),
+        ),
+      };
+      setResult(sorted);
       setStage("result");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Something went wrong";
