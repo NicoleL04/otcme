@@ -753,7 +753,7 @@ function SymptomPage() {
 
 
 
-        {(stage === "clarify" || stage === "loading-r" || stage === "loading-q") && chat.length > 0 && (
+        {(voiceActive || stage === "clarify" || stage === "loading-r" || stage === "loading-q" || (stage === "result" && chat.length > 0)) && chat.length > 0 && (
           <div className="mt-6 space-y-3">
             {chat.map((m, i) =>
               m.role === "user" ? (
