@@ -232,25 +232,58 @@ function SymptomPage() {
   const runVoiceFlow = async () => {
     if (!profile) return;
     setVoiceActive(true);
+    setChat([]);
     // Track profile patches we collect during the conversation
     const profilePatch: Partial<Profile> = {};
     const lifestylePatch: Partial<NonNullable<Profile["lifestyle"]>> = {};
 
+    // Wrappers that mirror the spoken conversation into the on-screen chat.
+    const say = async (text: string) => {
+      setChat((c) => [...c, { role: "assistant", text }]);
+      await voice.speak(text);
+    };
+    const askOneShown = async (
+      prompt: string,
+      opts: { retries?: number; rephrase?: string } = {},
+    ): Promise<string> => {
+      const retries = opts.retries ?? 1;
+      setChat((c) => [...c, { role: "assistant", text: prompt }]);
+      await voice.speak(prompt);
+      let answer = "";
+      for (let attempt = 0; attempt <= retries && !answer; attempt++) {
+        try {
+          answer = (await voice.listen()).trim();
+        } catch {
+          // ignore
+        }
+        if (!answer && attempt < retries) {
+          const r =
+            opts.rephrase ||
+            "Sorry, I didn't quite catch that. Could you say it once more?";
+          setChat((c) => [...c, { role: "assistant", text: r }]);
+          await voice.speak(r);
+        }
+      }
+      if (answer) setChat((c) => [...c, { role: "user", text: answer }]);
+      return answer;
+    };
+
     try {
       // 1. Greeting + main symptom
-      const symptomText = await askOne("Hello, how can I help you today?", {
+      const symptomText = await askOneShown("Hello, how can I help you today?", {
         retries: 2,
         rephrase: "No worries — in your own words, what's bothering you today?",
       });
       if (!symptomText) {
-        await voice.speak("I'm having trouble hearing you. Let's try typing instead.");
+        await say("I'm having trouble hearing you. Let's try typing instead.");
         setVoiceActive(false);
         return;
       }
       setSymptom(symptomText);
-      await voice.speak(
+      await say(
         "Thanks for sharing. I'd like to ask a few quick questions so I can point you to the safest option.",
       );
+
 
       // 2. Probing follow-ups — one at a time
       const probes: { key: string; q: string }[] = [
