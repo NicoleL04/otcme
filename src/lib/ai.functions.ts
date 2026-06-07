@@ -104,13 +104,7 @@ export const getRecommendation = createServerFn({ method: "POST" })
       [
         {
           role: "system",
-          content: `You are an expert clinical pharmacist assistant. Based on the patient's profile, recommend OTC PHARMACOLOGICAL medications for the symptom.
-
-STRICT SCOPE — PHARMACOLOGICAL OTC DRUGS ONLY:
-- ONLY include drugs with a defined active pharmaceutical ingredient sold OTC.
-- DO NOT include any non-pharmacological treatments: no rest, hydration, saline rinses, humidifiers, warm compresses, lozenges that are only honey/menthol-flavored candy, herbal teas, essential oils, homeopathy, supplements, vitamins, minerals, probiotics, or lifestyle advice.
-- Medicated lozenges/sprays/drops are OK ONLY if they contain a real pharmacological active ingredient (e.g. benzocaine, dyclonine, dextromethorphan, phenylephrine). Plain menthol/honey throat drops do NOT qualify.
-- If no suitable OTC pharmacological option exists for this patient, return an empty "categories" array — do NOT substitute non-drug advice.
+          content: `You are an expert clinical pharmacist assistant. Based on the patient's profile, recommend OTC medication categories for the symptom.
 
 CRITICAL — GROUP BY ACTIVE PHARMACEUTICAL INGREDIENT:
 - Each "category" must represent ONE active ingredient (or a fixed-dose combination), NOT a therapeutic class and NOT a brand.
