@@ -41,13 +41,35 @@ export function isVoiceSupported() {
 export function useVoiceAssistant() {
   const recRef = useRef<SpeechRecognitionInstance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  // Cancellation generation — bumped by stopSpeaking/stopListening so that
-  // any in-flight speak() (waiting on fetch) or listen() that started before
-  // the stop will resolve immediately instead of playing/recording further.
+  // Cancellation generation — bumped by stopSpeaking/stopListening/cancelAll
+  // so any in-flight speak/listen resolves immediately.
   const genRef = useRef(0);
+  const cancelledRef = useRef(false);
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [interim, setInterim] = useState("");
+
+  const hardStopAudio = useCallback(() => {
+    const a = audioRef.current;
+    if (a) {
+      try {
+        a.onplay = null;
+        a.onended = null;
+        a.onerror = null;
+        a.pause();
+        a.removeAttribute("src");
+        a.src = "";
+        try {
+          a.load();
+        } catch {
+          // ignore
+        }
+      } catch {
+        // ignore
+      }
+      audioRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -56,44 +78,57 @@ export function useVoiceAssistant() {
       } catch {
         // ignore
       }
-      if (audioRef.current) {
-        try {
-          audioRef.current.pause();
-        } catch {
-          // ignore
-        }
-        audioRef.current = null;
-      }
+      hardStopAudio();
     };
-  }, []);
+  }, [hardStopAudio]);
 
   const stopSpeaking = useCallback(() => {
     genRef.current += 1;
-    if (audioRef.current) {
-      try {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      } catch {
-        // ignore
-      }
-      audioRef.current = null;
-    }
+    cancelledRef.current = true;
+    hardStopAudio();
     setSpeaking(false);
+  }, [hardStopAudio]);
+
+  const stopListening = useCallback(() => {
+    genRef.current += 1;
+    cancelledRef.current = true;
+    try {
+      recRef.current?.abort();
+    } catch {
+      // ignore
+    }
+    recRef.current = null;
+    setListening(false);
+    setInterim("");
   }, []);
+
+  const cancelAll = useCallback(() => {
+    genRef.current += 1;
+    cancelledRef.current = true;
+    try {
+      recRef.current?.abort();
+    } catch {
+      // ignore
+    }
+    recRef.current = null;
+    hardStopAudio();
+    setListening(false);
+    setSpeaking(false);
+    setInterim("");
+  }, [hardStopAudio]);
+
+  const resetCancel = useCallback(() => {
+    cancelledRef.current = false;
+  }, []);
+
+  const isCancelled = useCallback(() => cancelledRef.current, []);
 
   const speak = useCallback(async (text: string): Promise<void> => {
     if (typeof window === "undefined" || !text.trim()) return;
+    if (cancelledRef.current) return;
     const gen = genRef.current;
 
-    // Stop any currently playing audio
-    if (audioRef.current) {
-      try {
-        audioRef.current.pause();
-      } catch {
-        // ignore
-      }
-      audioRef.current = null;
-    }
+    hardStopAudio();
 
     let audioBase64: string;
     try {
@@ -105,8 +140,7 @@ export function useVoiceAssistant() {
       return;
     }
 
-    // Bail out if a stop happened while we were waiting on the fetch
-    if (gen !== genRef.current) {
+    if (gen !== genRef.current || cancelledRef.current) {
       setSpeaking(false);
       return;
     }
@@ -114,14 +148,32 @@ export function useVoiceAssistant() {
     return new Promise<void>((resolve) => {
       const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
       audioRef.current = audio;
+      let done = false;
+      let interval: number | null = null;
+
       const finish = () => {
+        if (done) return;
+        done = true;
+        if (interval !== null) {
+          window.clearInterval(interval);
+          interval = null;
+        }
+        try {
+          audio.onplay = null;
+          audio.onended = null;
+          audio.onerror = null;
+        } catch {
+          // ignore
+        }
+        if (audioRef.current === audio) {
+          audioRef.current = null;
+        }
         setSpeaking(false);
-        if (audioRef.current === audio) audioRef.current = null;
         resolve();
       };
+
       audio.onplay = () => {
-        // If stop happened between fetch and play, halt immediately
-        if (gen !== genRef.current) {
+        if (gen !== genRef.current || cancelledRef.current) {
           try {
             audio.pause();
           } catch {
@@ -134,28 +186,28 @@ export function useVoiceAssistant() {
       };
       audio.onended = finish;
       audio.onerror = finish;
-      // Poll for cancellation while playing so a mid-playback stop resolves
-      // the awaited promise (pause() alone never fires onended).
-      const interval = window.setInterval(() => {
-        if (gen !== genRef.current || audio.paused) {
-          window.clearInterval(interval);
+
+      interval = window.setInterval(() => {
+        if (gen !== genRef.current || cancelledRef.current || audio.paused) {
+          try {
+            audio.pause();
+          } catch {
+            // ignore
+          }
           finish();
         }
-      }, 150);
-      const origFinish = finish;
-      // Wrap finish to also clear the interval
-      const cleanup = () => window.clearInterval(interval);
-      audio.addEventListener("ended", cleanup, { once: true });
-      audio.addEventListener("error", cleanup, { once: true });
-      audio.play().catch(() => {
-        cleanup();
-        origFinish();
-      });
+      }, 100);
+
+      audio.play().catch(() => finish());
     });
-  }, []);
+  }, [hardStopAudio]);
 
   const listen = useCallback((): Promise<string> => {
     return new Promise((resolve, reject) => {
+      if (cancelledRef.current) {
+        resolve("");
+        return;
+      }
       const Ctor = getRecognitionCtor();
       if (!Ctor) {
         reject(new Error("Speech recognition not supported in this browser"));
@@ -185,12 +237,16 @@ export function useVoiceAssistant() {
       rec.onerror = (e) => {
         setListening(false);
         setInterim("");
+        if (gen !== genRef.current || cancelledRef.current) {
+          resolve("");
+          return;
+        }
         reject(new Error(e.error || "Speech recognition error"));
       };
       rec.onend = () => {
         setListening(false);
         setInterim("");
-        if (gen !== genRef.current) {
+        if (gen !== genRef.current || cancelledRef.current) {
           resolve("");
         } else {
           resolve(finalText.trim());
@@ -208,15 +264,16 @@ export function useVoiceAssistant() {
     });
   }, []);
 
-  const stopListening = useCallback(() => {
-    genRef.current += 1;
-    try {
-      recRef.current?.abort();
-    } catch {
-      // ignore
-    }
-    setListening(false);
-  }, []);
-
-  return { speak, stopSpeaking, listen, stopListening, listening, speaking, interim };
+  return {
+    speak,
+    stopSpeaking,
+    listen,
+    stopListening,
+    cancelAll,
+    resetCancel,
+    isCancelled,
+    listening,
+    speaking,
+    interim,
+  };
 }

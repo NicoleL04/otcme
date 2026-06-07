@@ -231,6 +231,7 @@ function SymptomPage() {
 
   const runVoiceFlow = async () => {
     if (!profile) return;
+    voice.resetCancel();
     setVoiceActive(true);
     setChat([]);
     // Track profile patches we collect during the conversation
@@ -239,29 +240,36 @@ function SymptomPage() {
 
     // Wrappers that mirror the spoken conversation into the on-screen chat.
     const say = async (text: string) => {
+      if (voice.isCancelled()) throw new Error("__voice_cancelled__");
       setChat((c) => [...c, { role: "assistant", text }]);
       await voice.speak(text);
+      if (voice.isCancelled()) throw new Error("__voice_cancelled__");
     };
     const askOneShown = async (
       prompt: string,
       opts: { retries?: number; rephrase?: string } = {},
     ): Promise<string> => {
       const retries = opts.retries ?? 1;
+      if (voice.isCancelled()) throw new Error("__voice_cancelled__");
       setChat((c) => [...c, { role: "assistant", text: prompt }]);
       await voice.speak(prompt);
+      if (voice.isCancelled()) throw new Error("__voice_cancelled__");
       let answer = "";
       for (let attempt = 0; attempt <= retries && !answer; attempt++) {
+        if (voice.isCancelled()) throw new Error("__voice_cancelled__");
         try {
           answer = (await voice.listen()).trim();
         } catch {
           // ignore
         }
+        if (voice.isCancelled()) throw new Error("__voice_cancelled__");
         if (!answer && attempt < retries) {
           const r =
             opts.rephrase ||
             "Sorry, I didn't quite catch that. Could you say it once more?";
           setChat((c) => [...c, { role: "assistant", text: r }]);
           await voice.speak(r);
+          if (voice.isCancelled()) throw new Error("__voice_cancelled__");
         }
       }
       if (answer) setChat((c) => [...c, { role: "user", text: answer }]);
@@ -470,10 +478,18 @@ function SymptomPage() {
         );
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Voice flow failed";
-      toast.error(msg);
-      await say("Sorry, something went wrong. You can continue by typing.");
-
+      const isCancel =
+        voice.isCancelled() ||
+        (e instanceof Error && e.message === "__voice_cancelled__");
+      if (!isCancel) {
+        const msg = e instanceof Error ? e.message : "Voice flow failed";
+        toast.error(msg);
+        try {
+          await say("Sorry, something went wrong. You can continue by typing.");
+        } catch {
+          // ignore
+        }
+      }
     } finally {
       setVoiceActive(false);
     }
@@ -481,8 +497,7 @@ function SymptomPage() {
 
 
   const stopVoice = () => {
-    voice.stopListening();
-    voice.stopSpeaking();
+    voice.cancelAll();
     setVoiceActive(false);
   };
 
