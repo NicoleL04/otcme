@@ -40,16 +40,29 @@ export function TopNav() {
           <div className="relative">
             <button
               onClick={() => setOpen((v) => !v)}
-              className="flex items-center gap-2 rounded-md border bg-background px-3 py-1.5 text-sm font-medium text-navy hover:bg-accent"
+              className="flex items-center gap-2.5 rounded-xl border bg-card px-2.5 py-1.5 text-left shadow-sm transition hover:border-primary hover:shadow-md"
             >
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-teal text-xs text-white">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-teal text-sm font-semibold text-white">
                 {active.profile_name.charAt(0).toUpperCase()}
               </span>
-              {active.profile_name}
+              <span className="hidden flex-col leading-tight sm:flex">
+                <span className="text-sm font-semibold text-navy">{active.profile_name}</span>
+                <span className="text-[11px] text-muted-foreground">
+                  Age {active.age} · {active.gender}
+                </span>
+              </span>
+              <span className="flex flex-col leading-tight sm:hidden">
+                <span className="text-sm font-semibold text-navy">{active.profile_name}</span>
+              </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </button>
             {open && (
-              <div className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-md border bg-popover shadow-lg">
+              <div className="absolute right-0 z-20 mt-2 w-64 overflow-hidden rounded-xl border bg-popover shadow-lg">
+                <div className="border-b bg-muted/30 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Switch profile
+                  </p>
+                </div>
                 <div className="p-1">
                   {profiles.map((p) => (
                     <button
