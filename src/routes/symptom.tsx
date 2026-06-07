@@ -872,12 +872,30 @@ function CategoryCard({ category }: { category: Recommendation["categories"][num
             <p className="mt-1">{category.examples.join(", ")}</p>
           </div>
           {showLearnMore && (
-            <ProductExplorer
-              activeIngredient={category.category_name}
-              examples={category.examples}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <ProductExplorer
+                activeIngredient={category.category_name}
+                examples={category.examples}
+              />
+              <button
+                type="button"
+                onClick={() => setNearbyOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-teal/30 bg-teal/5 px-3 py-1.5 text-xs font-medium text-teal hover:bg-teal/10"
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                Find {category.category_name} nearby
+              </button>
+            </div>
           )}
         </div>
+      )}
+      {showLearnMore && (
+        <NearbyPharmaciesDialog
+          open={nearbyOpen}
+          onOpenChange={setNearbyOpen}
+          ingredient={category.category_name}
+          examples={category.examples}
+        />
       )}
     </div>
   );
