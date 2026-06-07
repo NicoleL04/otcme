@@ -211,3 +211,68 @@ export const extractMedicationFromImage = createServerFn({ method: "POST" })
     ]);
     return { medication_name: (content as string).trim() };
   });
+
+const productListSchema = z.object({
+  active_ingredient: z.string(),
+  products: z.array(
+    z.object({
+      name: z.string(),
+      type: z.enum(["brand", "generic", "store-brand"]),
+      form: z.string(),
+      strength: z.string(),
+      typical_pack: z.string(),
+      reference_price_usd: z.string(),
+    }),
+  ),
+  price_note: z.string(),
+});
+export type ProductList = z.infer<typeof productListSchema>;
+
+/** Learn more — list products (brand + generic) for an active ingredient with reference prices */
+export const getProductDetails = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      active_ingredient: z.string().min(1),
+      examples: z.array(z.string()).optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<ProductList> => {
+    const content = await callGateway(
+      [
+        {
+          role: "system",
+          content: `You are a pharmacy product database assistant. Given an OTC active pharmaceutical ingredient, list the common products available in the United States that contain THAT SAME active ingredient.
+
+Include both BRAND-name and GENERIC / store-brand options when they exist. Each product must contain the same active ingredient (do NOT include products with different active ingredients, even if they treat the same symptom).
+
+For each product provide an APPROXIMATE reference retail price in USD for a typical retail pack size (e.g. "$8-$12 for 100 tablets"). Prices are rough public-retail estimates, NOT promises — explicitly note this in "price_note".
+
+Output ONLY valid JSON:
+{
+  "active_ingredient": "string",
+  "products": [
+    {
+      "name": "string — exact product name as sold (e.g. 'Advil Liqui-Gels')",
+      "type": "brand" | "generic" | "store-brand",
+      "form": "string — tablet / liquid / gel / cream / etc.",
+      "strength": "string — e.g. '200 mg'",
+      "typical_pack": "string — e.g. '100 ct'",
+      "reference_price_usd": "string — e.g. '$8-$12'"
+    }
+  ],
+  "price_note": "string — short disclaimer that prices are estimates and vary by retailer/region"
+}
+
+Aim for 4-8 products covering the major brand(s) and 1-3 generic / store-brand options.`,
+        },
+        {
+          role: "user",
+          content: `Active ingredient: ${data.active_ingredient}${
+            data.examples?.length ? `\nKnown examples: ${data.examples.join(", ")}` : ""
+          }`,
+        },
+      ],
+      true,
+    );
+    return productListSchema.parse(parseJson(content));
+  });
