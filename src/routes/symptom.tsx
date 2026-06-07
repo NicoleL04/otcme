@@ -253,7 +253,14 @@ function SymptomPage() {
         ),
       };
       setResult(sorted);
-      setStage("result");
+      sessionStorage.setItem(
+        "otcandme_recommendations",
+        JSON.stringify({
+          symptom: symptomText,
+          clarification: clarificationText,
+          recommendation: sorted,
+        }),
+      );
 
       const top = sorted.categories[0];
       if (top) {
@@ -264,9 +271,11 @@ function SymptomPage() {
               ? "may be okay, but please check with a pharmacist first"
               : "is not recommended for you";
         await say(
-          `Your top option is ${top.category_name}. It ${label}. ${top.reason} You can see all options on screen, or tap any card to learn more.`,
+          `Your top option is ${top.category_name}. It ${label}. ${top.reason} Opening your recommendations now.`,
         );
       }
+      navigate({ to: "/recommendations" });
+
     } catch (e) {
       const isCancel =
         voice.isCancelled() ||
