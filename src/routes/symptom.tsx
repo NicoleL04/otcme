@@ -465,14 +465,15 @@ function SymptomPage() {
             : top.status === "yellow"
               ? "may be okay, but please check with a pharmacist first"
               : "is not recommended for you";
-        await voice.speak(
+        await say(
           `Your top option is ${top.category_name}. It ${label}. ${top.reason} You can see all options on screen, or tap any card to learn more.`,
         );
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Voice flow failed";
       toast.error(msg);
-      await voice.speak("Sorry, something went wrong. You can continue by typing.");
+      await say("Sorry, something went wrong. You can continue by typing.");
+
     } finally {
       setVoiceActive(false);
     }
