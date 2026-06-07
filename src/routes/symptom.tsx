@@ -99,37 +99,6 @@ function SymptomPage() {
   if (!profile) return null;
 
 
-  const askOne = async (
-    prompt: string,
-    { retries = 1, rephrase }: { retries?: number; rephrase?: string } = {},
-  ): Promise<string> => {
-    await voice.speak(prompt);
-    let answer = "";
-    for (let attempt = 0; attempt <= retries && !answer; attempt++) {
-      try {
-        answer = (await voice.listen()).trim();
-      } catch {
-        // ignore
-      }
-      if (!answer && attempt < retries) {
-        await voice.speak(
-          rephrase || "Sorry, I didn't quite catch that. Could you say it once more?",
-        );
-      }
-    }
-    return answer;
-  };
-
-  const isNegative = (s: string) => {
-    const t = s.toLowerCase();
-    return /\b(no|none|nope|nothing|haven't|have not|never|nah|negative)\b/.test(t);
-  };
-  const isAffirmative = (s: string) => {
-    const t = s.toLowerCase();
-    return /\b(yes|yeah|yep|yup|sure|correct|right|affirmative|i did|i have)\b/.test(t);
-  };
-  const isMissing = (v?: string) =>
-    !v || /^(not reported|none|n\/a|unknown)$/i.test(v.trim());
 
   // Minimal fallback probes if the AI probe call fails.
   const fallbackProbes = (): Probe[] => [
