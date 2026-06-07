@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { synthesizeSpeech } from "@/lib/tts.functions";
 
 // Minimal types for Web Speech API (not in lib.dom for all TS targets)
 type SpeechRecognitionResult = {
@@ -34,15 +35,12 @@ function getRecognitionCtor():
 }
 
 export function isVoiceSupported() {
-  return (
-    typeof window !== "undefined" &&
-    !!getRecognitionCtor() &&
-    "speechSynthesis" in window
-  );
+  return typeof window !== "undefined" && !!getRecognitionCtor();
 }
 
 export function useVoiceAssistant() {
   const recRef = useRef<SpeechRecognitionInstance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [interim, setInterim] = useState("");
@@ -54,37 +52,72 @@ export function useVoiceAssistant() {
       } catch {
         // ignore
       }
-      if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+      if (audioRef.current) {
+        try {
+          audioRef.current.pause();
+        } catch {
+          // ignore
+        }
+        audioRef.current = null;
+      }
     };
   }, []);
 
-  const speak = useCallback((text: string): Promise<void> => {
-    return new Promise((resolve) => {
-      if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-        resolve();
-        return;
+  const stopSpeaking = useCallback(() => {
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      } catch {
+        // ignore
       }
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1;
-      u.pitch = 1;
-      u.lang = "en-US";
-      u.onstart = () => setSpeaking(true);
-      u.onend = () => {
-        setSpeaking(false);
-        resolve();
-      };
-      u.onerror = () => {
-        setSpeaking(false);
-        resolve();
-      };
-      window.speechSynthesis.speak(u);
-    });
+      audioRef.current = null;
+    }
+    setSpeaking(false);
   }, []);
 
-  const stopSpeaking = useCallback(() => {
-    if (typeof window !== "undefined") window.speechSynthesis?.cancel();
-    setSpeaking(false);
+  const speak = useCallback(async (text: string): Promise<void> => {
+    if (typeof window === "undefined" || !text.trim()) return;
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      try {
+        audioRef.current.pause();
+      } catch {
+        // ignore
+      }
+      audioRef.current = null;
+    }
+
+    let audioBase64: string;
+    try {
+      const res = await synthesizeSpeech({ data: { text } });
+      audioBase64 = res.audioBase64;
+    } catch (err) {
+      console.error("TTS request failed", err);
+      setSpeaking(false);
+      return;
+    }
+
+    return new Promise<void>((resolve) => {
+      const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
+      audioRef.current = audio;
+      audio.onplay = () => setSpeaking(true);
+      audio.onended = () => {
+        setSpeaking(false);
+        if (audioRef.current === audio) audioRef.current = null;
+        resolve();
+      };
+      audio.onerror = () => {
+        setSpeaking(false);
+        if (audioRef.current === audio) audioRef.current = null;
+        resolve();
+      };
+      audio.play().catch(() => {
+        setSpeaking(false);
+        if (audioRef.current === audio) audioRef.current = null;
+        resolve();
+      });
+    });
   }, []);
 
   const listen = useCallback((): Promise<string> => {
