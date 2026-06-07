@@ -67,6 +67,7 @@ function SymptomPage() {
   const navigate = useNavigate();
   const askClarify = useServerFn(getClarifyingQuestions);
   const askRec = useServerFn(getRecommendation);
+  const askProbes = useServerFn(getSymptomProbes);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [stage, setStage] = useState<Stage>("input");
