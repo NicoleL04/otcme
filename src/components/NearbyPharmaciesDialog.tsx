@@ -1,7 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { MapPin, Loader2, CheckCircle2, AlertCircle, XCircle } from "lucide-react";
+import { MapPin, Loader2, CheckCircle2, AlertCircle, XCircle, Heart } from "lucide-react";
 import { simulateNearbyOptions, type NearbyOption, type StockLevel } from "@/lib/pharmacy-simulator";
+import { getActiveProfile } from "@/lib/profile";
+import { isInWishlist, toggleWishlist } from "@/lib/wishlist";
+import { toast } from "sonner";
 
 type Props = {
   open: boolean;
@@ -31,6 +34,26 @@ const STOCK_META: Record<StockLevel, { label: string; cls: string; icon: ReactNo
 export function NearbyPharmaciesDialog({ open, onOpenChange, ingredient, examples }: Props) {
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<NearbyOption[] | null>(null);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+
+  const refreshSaved = (opts: NearbyOption[]) => {
+    const p = getActiveProfile();
+    if (!p) return;
+    setSavedIds(new Set(opts.filter((o) => isInWishlist(p.id, ingredient, o)).map((o) => o.id)));
+  };
+
+  const handleToggleSave = (opt: NearbyOption) => {
+    const p = getActiveProfile();
+    if (!p) return;
+    const nowSaved = toggleWishlist(p.id, ingredient, opt);
+    setSavedIds((prev) => {
+      const next = new Set(prev);
+      if (nowSaved) next.add(opt.id);
+      else next.delete(opt.id);
+      return next;
+    });
+    toast.success(nowSaved ? "Saved to wishlist" : "Removed from wishlist");
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -40,6 +63,7 @@ export function NearbyPharmaciesDialog({ open, onOpenChange, ingredient, example
     const compute = () => {
       const result = simulateNearbyOptions(ingredient, examples);
       setOptions(result);
+      refreshSaved(result);
       setLoading(false);
     };
 
@@ -106,9 +130,21 @@ export function NearbyPharmaciesDialog({ open, onOpenChange, ingredient, example
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1.5">
-                      <span className="text-sm font-semibold text-navy">
-                        ${opt.priceUsd.toFixed(2)}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-semibold text-navy">
+                          ${opt.priceUsd.toFixed(2)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSave(opt)}
+                          aria-label={savedIds.has(opt.id) ? "Remove from wishlist" : "Add to wishlist"}
+                          className="grid h-7 w-7 place-items-center rounded-full border bg-card text-muted-foreground transition hover:border-primary hover:text-primary"
+                        >
+                          <Heart
+                            className={`h-3.5 w-3.5 ${savedIds.has(opt.id) ? "fill-primary text-primary" : ""}`}
+                          />
+                        </button>
+                      </div>
                       <span
                         className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${meta.cls}`}
                       >

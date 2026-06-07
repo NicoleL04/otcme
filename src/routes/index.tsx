@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
 import { getActiveProfile, type Profile } from "@/lib/profile";
 import { getHistoryForProfile, type HistoryEntry } from "@/lib/history";
-import { Clock, Pill, Search, ShieldCheck } from "lucide-react";
+import { Clock, Heart, Pill, Search, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -131,6 +131,21 @@ function Home() {
             </div>
           </button>
         </div>
+
+        <button
+          onClick={() => navigate({ to: "/wishlist" })}
+          className="mt-4 flex w-full items-center gap-3 rounded-xl border bg-card p-3 text-left shadow-sm transition hover:border-primary hover:shadow-md"
+        >
+          <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+            <Heart className="h-4 w-4" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-navy">My wishlist</p>
+            <p className="text-xs text-muted-foreground">
+              Medications you've saved from nearby pharmacies.
+            </p>
+          </div>
+        </button>
 
         <section className="mt-8">
           <div className="mb-3 flex items-center gap-2">
