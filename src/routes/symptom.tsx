@@ -9,10 +9,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getActiveProfile, profileSummary, type Profile } from "@/lib/profile";
 import {
   getClarifyingQuestions,
+  getProductDetails,
   getRecommendation,
+  type ProductList,
   type Recommendation,
 } from "@/lib/ai.functions";
-import { ArrowLeft, ChevronDown, Send, FileText } from "lucide-react";
+import { addHistory } from "@/lib/history";
+import { ArrowLeft, ChevronDown, Send, FileText, Tag, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/symptom")({
@@ -90,6 +93,16 @@ function SymptomPage() {
         recommendation: result,
       }),
     );
+    const top = result.categories.find((c) => c.status === "green") ?? result.categories[0];
+    addHistory({
+      profile_id: profile.id,
+      type: "symptom",
+      query: symptom,
+      summary: top
+        ? `${top.category_name} — ${top.status === "green" ? "Safe" : top.status === "yellow" ? "Consult pharmacist" : "Not recommended"}`
+        : "No recommendation",
+      status: top?.status,
+    });
     navigate({ to: "/summary" });
   };
 
