@@ -543,3 +543,34 @@ function ProductExplorer({
     </div>
   );
 }
+
+function VoiceStatus({
+  speaking,
+  listening,
+  interim,
+}: {
+  speaking: boolean;
+  listening: boolean;
+  interim: string;
+}) {
+  return (
+    <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+      {speaking ? (
+        <>
+          <Volume2 className="h-4 w-4 animate-pulse text-primary" />
+          <span>Assistant is speaking…</span>
+        </>
+      ) : listening ? (
+        <>
+          <Mic className="h-4 w-4 animate-pulse text-primary" />
+          <span>Listening{interim ? `: "${interim}"` : "…"}</span>
+        </>
+      ) : (
+        <>
+          <MicOff className="h-4 w-4" />
+          <span>Thinking…</span>
+        </>
+      )}
+    </div>
+  );
+}
