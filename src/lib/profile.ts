@@ -1,3 +1,9 @@
+export type Lifestyle = {
+  smoking: string; // "Never" | "Former" | "Current" | description
+  alcohol: string;
+  drugs: string;
+};
+
 export type Profile = {
   id: string;
   profile_name: string;
@@ -11,6 +17,7 @@ export type Profile = {
   prescriptions: string;
   allergies: string;
   home_meds: string;
+  lifestyle?: Lifestyle;
   created_at: number;
 };
 
@@ -58,8 +65,6 @@ export function hasSelfProfile(): boolean {
   return getProfiles().some((p) => p.is_self);
 }
 
-
-
 export function getActiveProfileId(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(ACTIVE_KEY);
@@ -77,6 +82,7 @@ export function getActiveProfile(): Profile | null {
 }
 
 export function profileSummary(p: Profile): string {
+  const ls = p.lifestyle;
   const parts = [
     `Name: ${p.profile_name}`,
     `Age: ${p.age}`,
@@ -87,6 +93,9 @@ export function profileSummary(p: Profile): string {
     `Prescription medications: ${p.prescriptions || "None"}`,
     `Allergies: ${p.allergies || "None"}`,
     `Home medicines: ${p.home_meds || "None"}`,
+    `Smoking: ${ls?.smoking || "Not reported"}`,
+    `Alcohol use: ${ls?.alcohol || "Not reported"}`,
+    `Other drug use: ${ls?.drugs || "Not reported"}`,
   ];
   return parts.join("\n");
 }
