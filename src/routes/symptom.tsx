@@ -87,7 +87,12 @@ function SymptomPage() {
         return;
       }
       setSymptom(symptomText);
-      await voice.speak(`Got it. You said: ${symptomText}. Let me ask you a quick follow-up.`);
+      const ackOptions = [
+        "Thanks for sharing that. I want to make sure I help you with the right thing, so I have one quick follow-up.",
+        "Okay, I hear you. Let me ask you something quick so I can point you in the safest direction.",
+        "Got it, thank you. Just one quick thing before I look up options for you.",
+      ];
+      await voice.speak(ackOptions[Math.floor(Math.random() * ackOptions.length)]);
 
       // Clarifying questions
       setStage("loading-q");
@@ -112,8 +117,8 @@ function SymptomPage() {
       setAnswers(answerText);
       await voice.speak(
         answerText
-          ? `Thanks. Finding the safest options for you now.`
-          : "No problem. Let me find some options based on what you told me.",
+          ? "Perfect, that's really helpful. Give me just a moment to look up the safest options for you."
+          : "No worries at all. I'll go ahead and find some options based on what you've shared.",
       );
 
       // Recommendation
