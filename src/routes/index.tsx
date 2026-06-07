@@ -150,13 +150,18 @@ function Home() {
           ) : (
             <ul className="space-y-2">
               {history.map((h) => (
-                <li key={h.id}>
+                <li key={h.id} data-profile-id={h.profile_id}>
                   <button
                     onClick={() =>
                       navigate({ to: "/history/$id", params: { id: h.id } })
                     }
+                    data-profile-id={h.profile_id}
+                    data-profile-name={h.profile_snapshot?.profile_name ?? profile.profile_name}
                     className="block w-full rounded-xl border bg-card p-3 text-left shadow-sm transition hover:border-primary hover:shadow-md"
                   >
+                    <span hidden aria-hidden="true" data-profile-id={h.profile_id}>
+                      profile:{h.profile_id}
+                    </span>
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">
                       {h.type === "symptom" ? "Symptom check" : "Safety check"} ·{" "}
                       {new Date(h.created_at).toLocaleDateString()}
