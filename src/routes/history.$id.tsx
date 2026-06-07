@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { TopNav } from "@/components/TopNav";
 import { getHistoryEntry, type HistoryEntry } from "@/lib/history";
 import { getProductDetails, type ProductList, type Recommendation, type SafetyResult } from "@/lib/ai.functions";
+import { NearbyPharmaciesDialog } from "@/components/NearbyPharmaciesDialog";
 import {
   ArrowLeft,
   ChevronDown,
@@ -12,6 +13,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   XCircle,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 
