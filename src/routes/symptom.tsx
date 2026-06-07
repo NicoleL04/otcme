@@ -422,22 +422,30 @@ function SymptomPage() {
     setVoiceActive(false);
   };
 
-  const submitSymptom = () => {
+  const submitSymptom = async () => {
     if (!symptom.trim()) return;
-    const probes = buildProbes(profile);
-    setProbeQueue(probes);
     setProbeAnswers({});
     setPatches({ profile: {}, lifestyle: {} });
     setChat([
       { role: "user", text: symptom },
       {
         role: "assistant",
-        text: "Thanks for sharing. I'd like to ask a few quick questions so I can point you to the safest option.",
+        text: "Thanks. Thinking of a few quick questions…",
       },
-      { role: "assistant", text: probes[0].q },
     ]);
     setAnswers("");
     setTextInput("");
+    setStage("loading-q");
+    const probes = await fetchProbes(profile, symptom);
+    setProbeQueue(probes);
+    setChat((c) => [
+      ...c.filter((m) => m.text !== "Thanks. Thinking of a few quick questions…"),
+      {
+        role: "assistant",
+        text: "Thanks for sharing. A few quick questions so I can point you to the safest option.",
+      },
+      { role: "assistant", text: probes[0].q },
+    ]);
     setStage("clarify");
   };
 
