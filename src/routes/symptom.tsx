@@ -89,6 +89,7 @@ function SymptomPage() {
 
   const voice = useVoiceAssistant();
   const voiceSupported = isVoiceSupported();
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const p = getActiveProfile();
@@ -96,7 +97,13 @@ function SymptomPage() {
     else setProfile(p);
   }, [navigate]);
 
+  // Auto-scroll the inner chat panel to the latest message.
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [chat.length, stage, voice.interim]);
+
   if (!profile) return null;
+
 
 
 
