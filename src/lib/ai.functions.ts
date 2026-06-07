@@ -65,7 +65,20 @@ export const getClarifyingQuestions = createServerFn({ method: "POST" })
     const content = await callGateway([
       {
         role: "system",
-        content: `You are an expert clinical pharmacist assistant. The user has described a symptom. Ask 1 to 2 short, focused clarifying questions (duration, severity, location, accompanying symptoms, etc.) that will help recommend the safest OTC medication. Respond with ONLY the questions, plainly written, no preamble. Patient profile:\n${data.profile}`,
+        content: `You are an expert clinical pharmacist assistant. The user has described a symptom. Ask 2 to 4 short, focused clarifying questions that will help recommend the safest OTC medication.
+
+ALWAYS include at least ONE temporal/recency probe — recent activity that the static profile would NOT capture. Examples (pick whichever are most relevant to the symptom):
+- Any OTC or prescription medicine taken in the last 24-72 hours (including doses already taken today for this symptom — to avoid double-dosing acetaminophen, NSAIDs, antihistamines, decongestants, etc.).
+- Any recent medical procedures, surgery, dental work, vaccinations, or hospital visits in the last 2-4 weeks.
+- Any recent dietary changes, fasting, alcohol use in the last 24h, grapefruit juice, or new supplements/herbal products.
+- Any recent illness, infection, or antibiotics course in the last 2 weeks.
+
+Also include 1-2 standard symptom-clarifying questions (duration, severity, location, accompanying symptoms, fever, pregnancy/breastfeeding if relevant).
+
+Format each question on its own line, numbered. No preamble, no closing remark.
+
+Patient profile:
+${data.profile}`,
       },
       { role: "user", content: data.symptom },
     ]);
@@ -197,4 +210,69 @@ export const extractMedicationFromImage = createServerFn({ method: "POST" })
       },
     ]);
     return { medication_name: (content as string).trim() };
+  });
+
+const productListSchema = z.object({
+  active_ingredient: z.string(),
+  products: z.array(
+    z.object({
+      name: z.string(),
+      type: z.enum(["brand", "generic", "store-brand"]),
+      form: z.string(),
+      strength: z.string(),
+      typical_pack: z.string(),
+      reference_price_usd: z.string(),
+    }),
+  ),
+  price_note: z.string(),
+});
+export type ProductList = z.infer<typeof productListSchema>;
+
+/** Learn more — list products (brand + generic) for an active ingredient with reference prices */
+export const getProductDetails = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      active_ingredient: z.string().min(1),
+      examples: z.array(z.string()).optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<ProductList> => {
+    const content = await callGateway(
+      [
+        {
+          role: "system",
+          content: `You are a pharmacy product database assistant. Given an OTC active pharmaceutical ingredient, list the common products available in the United States that contain THAT SAME active ingredient.
+
+Include both BRAND-name and GENERIC / store-brand options when they exist. Each product must contain the same active ingredient (do NOT include products with different active ingredients, even if they treat the same symptom).
+
+For each product provide an APPROXIMATE reference retail price in USD for a typical retail pack size (e.g. "$8-$12 for 100 tablets"). Prices are rough public-retail estimates, NOT promises — explicitly note this in "price_note".
+
+Output ONLY valid JSON:
+{
+  "active_ingredient": "string",
+  "products": [
+    {
+      "name": "string — exact product name as sold (e.g. 'Advil Liqui-Gels')",
+      "type": "brand" | "generic" | "store-brand",
+      "form": "string — tablet / liquid / gel / cream / etc.",
+      "strength": "string — e.g. '200 mg'",
+      "typical_pack": "string — e.g. '100 ct'",
+      "reference_price_usd": "string — e.g. '$8-$12'"
+    }
+  ],
+  "price_note": "string — short disclaimer that prices are estimates and vary by retailer/region"
+}
+
+Aim for 4-8 products covering the major brand(s) and 1-3 generic / store-brand options.`,
+        },
+        {
+          role: "user",
+          content: `Active ingredient: ${data.active_ingredient}${
+            data.examples?.length ? `\nKnown examples: ${data.examples.join(", ")}` : ""
+          }`,
+        },
+      ],
+      true,
+    );
+    return productListSchema.parse(parseJson(content));
   });

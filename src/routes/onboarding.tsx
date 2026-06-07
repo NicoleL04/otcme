@@ -44,6 +44,9 @@ function Onboarding() {
   const [prescriptions, setPrescriptions] = useState("");
   const [allergies, setAllergies] = useState("");
   const [homeMeds, setHomeMeds] = useState("");
+  const [smoking, setSmoking] = useState("Never");
+  const [alcohol, setAlcohol] = useState("None");
+  const [drugs, setDrugs] = useState("None");
 
   useEffect(() => {
     const taken = hasSelfProfile();
@@ -73,6 +76,11 @@ function Onboarding() {
       prescriptions: prescriptions.trim(),
       allergies: allergies.trim(),
       home_meds: homeMeds.trim(),
+      lifestyle: {
+        smoking: smoking.trim(),
+        alcohol: alcohol.trim(),
+        drugs: drugs.trim(),
+      },
       created_at: Date.now(),
     };
     addProfile(profile);
@@ -282,6 +290,51 @@ function Onboarding() {
                   className="mt-1"
                 />
               </div>
+
+              <div className="mt-6 rounded-lg border bg-muted/30 p-4">
+                <p className="text-sm font-medium">Lifestyle</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  These affect how some OTC medicines work and what's safe.
+                </p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <div>
+                    <Label htmlFor="smoking" className="text-xs">Smoking / tobacco</Label>
+                    <select
+                      id="smoking"
+                      value={smoking}
+                      onChange={(e) => setSmoking(e.target.value)}
+                      className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      {["Never", "Former", "Occasional", "Daily"].map((o) => (
+                        <option key={o}>{o}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor="alcohol" className="text-xs">Alcohol</Label>
+                    <select
+                      id="alcohol"
+                      value={alcohol}
+                      onChange={(e) => setAlcohol(e.target.value)}
+                      className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      {["None", "Occasional (≤2/week)", "Moderate (3-7/week)", "Heavy (8+/week)"].map((o) => (
+                        <option key={o}>{o}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label htmlFor="drugs" className="text-xs">Recreational drugs</Label>
+                    <Input
+                      id="drugs"
+                      placeholder="e.g. None, cannabis"
+                      value={drugs}
+                      onChange={(e) => setDrugs(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -305,6 +358,9 @@ function Onboarding() {
                 <Row label="Prescriptions" value={prescriptions || "None"} />
                 <Row label="Allergies" value={allergies || "None"} />
                 <Row label="At home" value={homeMeds || "None"} />
+                <Row label="Smoking" value={smoking} />
+                <Row label="Alcohol" value={alcohol} />
+                <Row label="Other drugs" value={drugs || "None"} />
               </dl>
             </div>
           )}

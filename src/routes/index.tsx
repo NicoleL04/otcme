@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { TopNav } from "@/components/TopNav";
-import { Button } from "@/components/ui/button";
 import { getActiveProfile, type Profile } from "@/lib/profile";
-import { Pill, Search, ShieldCheck } from "lucide-react";
+import { getHistoryForProfile, type HistoryEntry } from "@/lib/history";
+import { Clock, Pill, Search, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -23,6 +23,7 @@ function Home() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ready, setReady] = useState(false);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   useEffect(() => {
     const p = getActiveProfile();
@@ -30,6 +31,7 @@ function Home() {
       navigate({ to: "/onboarding" });
     } else {
       setProfile(p);
+      setHistory(getHistoryForProfile(p.id).slice(0, 5));
       setReady(true);
     }
   }, [navigate]);
@@ -106,6 +108,56 @@ function Home() {
             </div>
           </button>
         </div>
+
+        <section className="mt-8">
+          <div className="mb-3 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-lg font-semibold">Recent activity</h2>
+          </div>
+          {history.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-muted/30 p-5 text-sm text-muted-foreground">
+              No past consultations yet. Your symptom checks and safety lookups will appear here for {profile.profile_name}.
+              {profile.home_meds && (
+                <p className="mt-2 text-xs">
+                  <span className="font-medium text-navy">Medicines you have at home:</span>{" "}
+                  {profile.home_meds}
+                </p>
+              )}
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {history.map((h) => (
+                <li
+                  key={h.id}
+                  className="rounded-xl border bg-card p-3 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        {h.type === "symptom" ? "Symptom check" : "Safety check"} ·{" "}
+                        {new Date(h.created_at).toLocaleDateString()}
+                      </p>
+                      <p className="mt-0.5 truncate text-sm font-medium text-navy">{h.query}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                        {h.summary}
+                      </p>
+                    </div>
+                    {h.status && (
+                      <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[11px] font-medium text-navy">
+                        {h.status}
+                      </span>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {profile.home_meds && history.length > 0 && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              <span className="font-medium text-navy">At home:</span> {profile.home_meds}
+            </p>
+          )}
+        </section>
 
         <p className="mt-8 rounded-lg border border-dashed bg-muted/50 p-4 text-xs text-muted-foreground">
           OTC&Me provides informational guidance only and is not a substitute for advice from your
