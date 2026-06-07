@@ -254,6 +254,66 @@ function SettingsPage() {
             />
           </div>
 
+          <div className="mt-6 rounded-lg border bg-muted/30 p-4">
+            <p className="text-sm font-medium">Lifestyle</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <div>
+                <Label htmlFor="smoking" className="text-xs">Smoking / tobacco</Label>
+                <select
+                  id="smoking"
+                  value={form.lifestyle?.smoking ?? "Never"}
+                  onChange={(e) =>
+                    update("lifestyle", {
+                      smoking: e.target.value,
+                      alcohol: form.lifestyle?.alcohol ?? "None",
+                      drugs: form.lifestyle?.drugs ?? "None",
+                    })
+                  }
+                  className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  {["Never", "Former", "Occasional", "Daily"].map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="alcohol" className="text-xs">Alcohol</Label>
+                <select
+                  id="alcohol"
+                  value={form.lifestyle?.alcohol ?? "None"}
+                  onChange={(e) =>
+                    update("lifestyle", {
+                      smoking: form.lifestyle?.smoking ?? "Never",
+                      alcohol: e.target.value,
+                      drugs: form.lifestyle?.drugs ?? "None",
+                    })
+                  }
+                  className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  {["None", "Occasional (≤2/week)", "Moderate (3-7/week)", "Heavy (8+/week)"].map((o) => (
+                    <option key={o}>{o}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="drugs" className="text-xs">Recreational drugs</Label>
+                <Input
+                  id="drugs"
+                  placeholder="e.g. None, cannabis"
+                  value={form.lifestyle?.drugs ?? ""}
+                  onChange={(e) =>
+                    update("lifestyle", {
+                      smoking: form.lifestyle?.smoking ?? "Never",
+                      alcohol: form.lifestyle?.alcohol ?? "None",
+                      drugs: e.target.value,
+                    })
+                  }
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="mt-8 flex items-center justify-between">
             <Button variant="ghost" onClick={remove} className="text-destructive hover:text-destructive">
               <Trash2 className="h-4 w-4" /> Delete profile
