@@ -64,6 +64,10 @@ function HistoryDetailPage() {
               </p>
             )}
 
+            {entry.profile_snapshot && (
+              <PatientSnapshotCard profile={entry.profile_snapshot} />
+            )}
+
             <div className="mt-6 space-y-3">
               {entry.type === "symptom" && entry.payload ? (
                 <SymptomDetail rec={entry.payload as Recommendation} />
@@ -78,6 +82,56 @@ function HistoryDetailPage() {
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+function PatientSnapshotCard({ profile }: { profile: import("@/lib/profile").Profile }) {
+  const conditions = [...profile.conditions, profile.other_condition].filter(Boolean) as string[];
+  return (
+    <div className="mt-4 rounded-2xl border bg-card p-4 shadow-sm">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Patient profile at the time
+      </p>
+      <div className="mt-1.5 flex items-start gap-3">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-teal text-sm font-semibold text-white">
+          {profile.profile_name.charAt(0).toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-navy">{profile.profile_name}</p>
+          <p className="text-xs text-muted-foreground">
+            Age {profile.age} · {profile.gender}
+            {profile.height && profile.weight ? ` · ${profile.height} / ${profile.weight}` : ""}
+          </p>
+          {profile.lifestyle && (
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Smoking: {profile.lifestyle.smoking || "—"} · Alcohol: {profile.lifestyle.alcohol || "—"} · Drugs: {profile.lifestyle.drugs || "—"}
+            </p>
+          )}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {conditions.map((c) => (
+              <span key={c} className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-medium text-navy">
+                {c}
+              </span>
+            ))}
+            {profile.prescriptions && (
+              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                Rx: {profile.prescriptions}
+              </span>
+            )}
+            {profile.allergies && (
+              <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive">
+                Allergies: {profile.allergies}
+              </span>
+            )}
+            {profile.home_meds && (
+              <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[11px] font-medium text-warning-foreground">
+                Home: {profile.home_meds}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
