@@ -97,10 +97,13 @@ function SymptomPage() {
     else setProfile(p);
   }, [navigate]);
 
-  // Auto-scroll the inner chat panel to the latest message.
+  // Auto-scroll the inner chat panel to the latest message (without scrolling the page).
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const el = messagesEndRef.current;
+    const scroller = el?.parentElement;
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }, [chat.length, stage, voice.interim]);
+
 
   if (!profile) return null;
 
