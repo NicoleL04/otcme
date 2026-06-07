@@ -448,30 +448,83 @@ function SymptomPage() {
     setVoiceActive(false);
   };
 
-  const submitSymptom = async () => {
+  const submitSymptom = () => {
     if (!symptom.trim()) return;
-    setStage("loading-q");
-    try {
-      const r = await askClarify({
-        data: { profile: profileSummary(profile), symptom },
-      });
-      setQuestions(r.questions);
-      setStage("clarify");
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Something went wrong";
-      toast.error(msg);
-      setStage("input");
-    }
+    const probes = buildProbes(profile);
+    setProbeQueue(probes);
+    setProbeAnswers({});
+    setPatches({ profile: {}, lifestyle: {} });
+    setChat([
+      { role: "user", text: symptom },
+      {
+        role: "assistant",
+        text: "Thanks for sharing. I'd like to ask a few quick questions so I can point you to the safest option.",
+      },
+      { role: "assistant", text: probes[0].q },
+    ]);
+    setAnswers("");
+    setTextInput("");
+    setStage("clarify");
   };
 
-  const submitAnswers = async () => {
+  const finalizeTextFlow = async (
+    finalAnswers: Record<string, string>,
+    finalPatches: { profile: Record<string, string>; lifestyle: Record<string, string> },
+  ) => {
+    // Apply profile patches
+    let updatedProfile: Profile = profile;
+    const hasProfilePatch = Object.keys(finalPatches.profile).length > 0;
+    const hasLifestylePatch = Object.keys(finalPatches.lifestyle).length > 0;
+    if (hasProfilePatch || hasLifestylePatch) {
+      updatedProfile = {
+        ...profile,
+        ...finalPatches.profile,
+        lifestyle: {
+          smoking: profile.lifestyle?.smoking || "",
+          alcohol: profile.lifestyle?.alcohol || "",
+          drugs: profile.lifestyle?.drugs || "",
+          ...profile.lifestyle,
+          ...finalPatches.lifestyle,
+        },
+      };
+      updateProfile(profile.id, {
+        ...finalPatches.profile,
+        lifestyle: updatedProfile.lifestyle,
+      });
+      setProfile(updatedProfile);
+      setChat((c) => [
+        ...c,
+        {
+          role: "assistant",
+          text: "Thanks — I've saved that to your profile so you don't have to repeat it next time.",
+        },
+      ]);
+    }
+
+    // Build clarification text
+    const clarificationText = Object.entries(finalAnswers)
+      .filter(([k]) => !k.startsWith("_profile_"))
+      .map(([k, v]) => `${k}: ${v}`)
+      .join("\n");
+    setAnswers(clarificationText);
+
+    setStage("loading-q");
+    try {
+      const qRes = await askClarify({
+        data: { profile: profileSummary(updatedProfile), symptom },
+      });
+      setQuestions(qRes.questions);
+    } catch {
+      setQuestions("Intake completed.");
+    }
+
     setStage("loading-r");
     try {
       const r = await askRec({
         data: {
-          profile: profileSummary(profile),
+          profile: profileSummary(updatedProfile),
           symptom,
-          clarification: answers || "(no further detail)",
+          clarification: clarificationText || "(no further detail)",
         },
       });
       const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
@@ -489,6 +542,46 @@ function SymptomPage() {
       setStage("clarify");
     }
   };
+
+  const submitTextAnswer = () => {
+    const ans = textInput.trim();
+    if (!ans || probeQueue.length === 0) return;
+    const [current, ...rest] = probeQueue;
+    const followups: Probe[] = [];
+    const localProfilePatch = { ...patches.profile };
+    const localLifestylePatch = { ...patches.lifestyle };
+    const stored = current.handle
+      ? current.handle(ans, {
+          profilePatch: localProfilePatch,
+          lifestylePatch: localLifestylePatch,
+          pushFollowup: (p) => followups.push(p),
+        })
+      : ans;
+
+    const newAnswers = { ...probeAnswers, [current.key]: stored };
+    const newPatches = { profile: localProfilePatch, lifestyle: localLifestylePatch };
+    const newQueue = [...followups, ...rest];
+
+    setProbeAnswers(newAnswers);
+    setPatches(newPatches);
+    setProbeQueue(newQueue);
+    setChat((c) => [...c, { role: "user", text: ans }]);
+    setTextInput("");
+
+    if (newQueue.length > 0) {
+      setChat((c) => [...c, { role: "assistant", text: newQueue[0].q }]);
+    } else {
+      setChat((c) => [
+        ...c,
+        {
+          role: "assistant",
+          text: "Great, I have what I need. Finding the safest options for you now.",
+        },
+      ]);
+      void finalizeTextFlow(newAnswers, newPatches);
+    }
+  };
+
 
   const goSummary = () => {
     if (!result) return;
