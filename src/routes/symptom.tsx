@@ -155,9 +155,8 @@ function SymptomPage() {
     voice.resetCancel();
     setVoiceActive(true);
     setChat([]);
-    // Track profile patches we collect during the conversation
-    const profilePatch: Partial<Profile> = {};
-    const lifestylePatch: Partial<NonNullable<Profile["lifestyle"]>> = {};
+
+
 
     // Wrappers that mirror the spoken conversation into the on-screen chat.
     const say = async (text: string) => {
