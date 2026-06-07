@@ -386,7 +386,16 @@ function SymptomPage() {
         ),
       };
       setResult(sorted);
-      setStage("result");
+      sessionStorage.setItem(
+        "otcandme_recommendations",
+        JSON.stringify({
+          symptom,
+          clarification: clarificationText,
+          recommendation: sorted,
+        }),
+      );
+      navigate({ to: "/recommendations" });
+
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Something went wrong";
       toast.error(msg);
