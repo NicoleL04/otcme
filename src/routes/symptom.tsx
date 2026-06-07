@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { TopNav } from "@/components/TopNav";
 import { Button } from "@/components/ui/button";
@@ -89,6 +89,7 @@ function SymptomPage() {
 
   const voice = useVoiceAssistant();
   const voiceSupported = isVoiceSupported();
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const p = getActiveProfile();
@@ -96,7 +97,13 @@ function SymptomPage() {
     else setProfile(p);
   }, [navigate]);
 
+  // Auto-scroll the inner chat panel to the latest message.
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [chat.length, stage, voice.interim]);
+
   if (!profile) return null;
+
 
 
 
@@ -535,49 +542,58 @@ function SymptomPage() {
           </div>
         )}
 
-        {voiceActive && stage !== "input" && (
-          <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3">
-            <div className="flex items-center justify-between gap-3">
-              <VoiceStatus
-                speaking={voice.speaking}
-                listening={voice.listening}
-                interim={voice.interim}
-              />
-              <Button type="button" variant="destructive" size="sm" onClick={stopVoice}>
-                <Square className="h-4 w-4" /> Stop voice
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {stage === "loading-q" && chat.length === 0 && (
-          <LoaderCard label="Thinking of clarifying questions…" />
-        )}
-
-
-
-        {(voiceActive || stage === "clarify" || stage === "loading-r" || stage === "loading-q" || (stage === "result" && chat.length > 0)) && chat.length > 0 && (
-          <div className="mt-6 space-y-3">
-            {chat.map((m, i) =>
-              m.role === "user" ? (
-                <div
-                  key={i}
-                  className="ml-auto max-w-[80%] rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground"
-                >
-                  {m.text}
-                </div>
-              ) : (
-                <div
-                  key={i}
-                  className="max-w-[85%] rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm"
-                >
-                  <p className="mb-1 text-xs font-semibold text-primary">OTC&amp;Me Assistant</p>
-                  <p className="whitespace-pre-wrap">{m.text}</p>
-                </div>
-              ),
+        {(voiceActive ||
+          stage === "clarify" ||
+          stage === "loading-q" ||
+          stage === "loading-r" ||
+          (stage === "result" && chat.length > 0)) && (
+          <div className="mt-6 flex h-[calc(100vh-220px)] max-h-[700px] min-h-[420px] flex-col overflow-hidden rounded-2xl border bg-card shadow-sm">
+            {voiceActive && (
+              <div className="flex items-center justify-between gap-3 border-b border-primary/20 bg-primary/5 px-4 py-2">
+                <VoiceStatus
+                  speaking={voice.speaking}
+                  listening={voice.listening}
+                  interim={voice.interim}
+                />
+                <Button type="button" variant="destructive" size="sm" onClick={stopVoice}>
+                  <Square className="h-4 w-4" /> Stop voice
+                </Button>
+              </div>
             )}
+
+            <div className="flex-1 space-y-3 overflow-y-auto p-4">
+              {stage === "loading-q" && chat.length === 0 && (
+                <LoaderCard label="Thinking of clarifying questions…" />
+              )}
+              {chat.map((m, i) =>
+                m.role === "user" ? (
+                  <div
+                    key={i}
+                    className="ml-auto max-w-[80%] rounded-2xl rounded-tr-sm bg-primary px-4 py-2.5 text-sm text-primary-foreground"
+                  >
+                    {m.text}
+                  </div>
+                ) : (
+                  <div
+                    key={i}
+                    className="max-w-[85%] rounded-2xl rounded-tl-sm border bg-background px-4 py-3 text-sm shadow-sm"
+                  >
+                    <p className="mb-1 text-xs font-semibold text-primary">OTC&amp;Me Assistant</p>
+                    <p className="whitespace-pre-wrap">{m.text}</p>
+                  </div>
+                ),
+              )}
+              {stage === "loading-q" && chat.length > 0 && (
+                <LoaderCard label="Reviewing your answers…" />
+              )}
+              {stage === "loading-r" && (
+                <LoaderCard label="Finding the safest options for you…" />
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
             {stage === "clarify" && probeQueue.length > 0 && (
-              <div className="rounded-2xl border bg-card p-4 shadow-sm">
+              <div className="border-t bg-background p-3">
                 <Textarea
                   autoFocus
                   placeholder="Type your answer…"
@@ -591,7 +607,7 @@ function SymptomPage() {
                   }}
                   className="min-h-[60px]"
                 />
-                <div className="mt-3 flex items-center justify-between">
+                <div className="mt-2 flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">
                     Question {Object.keys(probeAnswers).length + 1}
                   </p>
@@ -600,12 +616,6 @@ function SymptomPage() {
                   </Button>
                 </div>
               </div>
-            )}
-            {stage === "loading-q" && (
-              <LoaderCard label="Reviewing your answers…" />
-            )}
-            {stage === "loading-r" && (
-              <LoaderCard label="Finding the safest options for you…" />
             )}
           </div>
         )}
