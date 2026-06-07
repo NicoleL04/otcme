@@ -2,7 +2,7 @@ import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { getActiveProfile, getProfiles, setActiveProfileId, type Profile } from "@/lib/profile";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, Pill, UserPlus } from "lucide-react";
+import { ChevronDown, Pill, Settings, UserPlus } from "lucide-react";
 
 export function TopNav() {
   const router = useRouter();
@@ -65,6 +65,17 @@ export function TopNav() {
                   ))}
                 </div>
                 <div className="border-t p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      setOpen(false);
+                      navigate({ to: "/settings" });
+                    }}
+                  >
+                    <Settings className="h-4 w-4" /> Settings
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
