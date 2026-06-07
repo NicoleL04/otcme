@@ -33,6 +33,8 @@ function RecommendationsPage() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [data, setData] = useState<StoredRecs | null>(null);
+  const voice = useVoiceAssistant();
+  const spokenRef = useRef(false);
 
   useEffect(() => {
     const p = getActiveProfile();
@@ -48,6 +50,36 @@ function RecommendationsPage() {
       // ignore
     }
   }, [navigate]);
+
+  useEffect(() => {
+    if (!data || spokenRef.current) return;
+    const flag = sessionStorage.getItem("otcandme_voice_active");
+    if (!flag) return;
+    sessionStorage.removeItem("otcandme_voice_active");
+    spokenRef.current = true;
+    const names = data.recommendation.categories.map((c) => c.category_name);
+    if (names.length === 0) return;
+    let line: string;
+    if (names.length === 1) {
+      line = `Here are your recommendations. The top option is ${names[0]}.`;
+    } else if (names.length === 2) {
+      line = `Here are your recommendations. The top option is ${names[0]}, followed by ${names[1]}.`;
+    } else {
+      const rest = names.slice(1, -1).join(", ");
+      const last = names[names.length - 1];
+      line = `Here are your recommendations. The top option is ${names[0]}, followed by ${rest}, and ${last}.`;
+    }
+    voice.resetCancel?.();
+    void voice.speak(line);
+  }, [data, voice]);
+
+  useEffect(() => {
+    return () => {
+      voice.cancelAll();
+    };
+  }, [voice]);
+
+
 
   if (!profile) return null;
 
