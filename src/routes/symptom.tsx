@@ -44,6 +44,22 @@ export const Route = createFileRoute("/symptom")({
 
 type Stage = "input" | "clarify" | "loading-q" | "loading-r" | "result";
 
+type ChatMsg = { role: "assistant" | "user"; text: string };
+type Probe = {
+  key: string;
+  q: string;
+  // Optional handler that can transform the answer or push a follow-up probe.
+  // Return value is stored under `key` in probeAnswers. May also mutate patches.
+  handle?: (
+    answer: string,
+    ctx: {
+      profilePatch: Record<string, string>;
+      lifestylePatch: Record<string, string>;
+      pushFollowup: (p: Probe) => void;
+    },
+  ) => string;
+};
+
 function SymptomPage() {
   const navigate = useNavigate();
   const askClarify = useServerFn(getClarifyingQuestions);
@@ -56,6 +72,17 @@ function SymptomPage() {
   const [answers, setAnswers] = useState("");
   const [result, setResult] = useState<Recommendation | null>(null);
   const [voiceActive, setVoiceActive] = useState(false);
+
+  // Text-chat probing state
+  const [chat, setChat] = useState<ChatMsg[]>([]);
+  const [probeQueue, setProbeQueue] = useState<Probe[]>([]);
+  const [probeAnswers, setProbeAnswers] = useState<Record<string, string>>({});
+  const [patches, setPatches] = useState<{
+    profile: Record<string, string>;
+    lifestyle: Record<string, string>;
+  }>({ profile: {}, lifestyle: {} });
+  const [textInput, setTextInput] = useState("");
+
   const voice = useVoiceAssistant();
   const voiceSupported = isVoiceSupported();
 
@@ -66,6 +93,7 @@ function SymptomPage() {
   }, [navigate]);
 
   if (!profile) return null;
+
 
   const askOne = async (
     prompt: string,
