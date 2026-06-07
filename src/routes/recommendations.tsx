@@ -73,11 +73,15 @@ function RecommendationsPage() {
     void voice.speak(line);
   }, [data, voice]);
 
+  const voiceRef = useRef(voice);
+  voiceRef.current = voice;
   useEffect(() => {
     return () => {
-      voice.cancelAll();
+      voiceRef.current.cancelAll();
     };
-  }, [voice]);
+  }, []);
+
+
 
 
 
