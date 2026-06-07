@@ -65,7 +65,20 @@ export const getClarifyingQuestions = createServerFn({ method: "POST" })
     const content = await callGateway([
       {
         role: "system",
-        content: `You are an expert clinical pharmacist assistant. The user has described a symptom. Ask 1 to 2 short, focused clarifying questions (duration, severity, location, accompanying symptoms, etc.) that will help recommend the safest OTC medication. Respond with ONLY the questions, plainly written, no preamble. Patient profile:\n${data.profile}`,
+        content: `You are an expert clinical pharmacist assistant. The user has described a symptom. Ask 2 to 4 short, focused clarifying questions that will help recommend the safest OTC medication.
+
+ALWAYS include at least ONE temporal/recency probe — recent activity that the static profile would NOT capture. Examples (pick whichever are most relevant to the symptom):
+- Any OTC or prescription medicine taken in the last 24-72 hours (including doses already taken today for this symptom — to avoid double-dosing acetaminophen, NSAIDs, antihistamines, decongestants, etc.).
+- Any recent medical procedures, surgery, dental work, vaccinations, or hospital visits in the last 2-4 weeks.
+- Any recent dietary changes, fasting, alcohol use in the last 24h, grapefruit juice, or new supplements/herbal products.
+- Any recent illness, infection, or antibiotics course in the last 2 weeks.
+
+Also include 1-2 standard symptom-clarifying questions (duration, severity, location, accompanying symptoms, fever, pregnancy/breastfeeding if relevant).
+
+Format each question on its own line, numbered. No preamble, no closing remark.
+
+Patient profile:
+${data.profile}`,
       },
       { role: "user", content: data.symptom },
     ]);
