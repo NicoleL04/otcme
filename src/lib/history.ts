@@ -1,3 +1,5 @@
+import type { Profile } from "./profile";
+
 export type HistoryEntry = {
   id: string;
   profile_id: string;
@@ -9,6 +11,8 @@ export type HistoryEntry = {
   // Full payload so we can re-render the previous consultation page
   payload?: unknown;
   clarification?: string;
+  // Snapshot of the profile at the time of the consultation
+  profile_snapshot?: Profile;
 };
 
 export function getHistoryEntry(id: string): HistoryEntry | undefined {
