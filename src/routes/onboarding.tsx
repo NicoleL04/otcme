@@ -1,11 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { addProfile, type Profile } from "@/lib/profile";
+import { addProfile, hasSelfProfile, type Profile } from "@/lib/profile";
 import { Pill, ArrowRight, ArrowLeft, Check } from "lucide-react";
 
 export const Route = createFileRoute("/onboarding")({
