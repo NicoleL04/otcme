@@ -15,8 +15,20 @@ import {
   type Recommendation,
 } from "@/lib/ai.functions";
 import { addHistory } from "@/lib/history";
-import { ArrowLeft, ChevronDown, Send, FileText, Tag, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Send,
+  FileText,
+  Tag,
+  Loader2,
+  Mic,
+  MicOff,
+  Volume2,
+  Square,
+} from "lucide-react";
 import { toast } from "sonner";
+import { useVoiceAssistant, isVoiceSupported } from "@/hooks/useVoiceAssistant";
 
 export const Route = createFileRoute("/symptom")({
   head: () => ({
