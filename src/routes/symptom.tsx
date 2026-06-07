@@ -131,104 +131,23 @@ function SymptomPage() {
   const isMissing = (v?: string) =>
     !v || /^(not reported|none|n\/a|unknown)$/i.test(v.trim());
 
-  // Canonical probe list — shared by text-chat flow and voice flow.
-  const buildProbes = (p: Profile): Probe[] => {
-    const probes: Probe[] = [
-      {
-        key: "duration",
-        q: "First, how long have you been feeling this way — a few hours, a day, or longer?",
-      },
-      {
-        key: "severity",
-        q: "How would you describe it right now — mild, moderate, or severe?",
-      },
-      {
-        key: "other_symptoms",
-        q: "Are you noticing anything else along with it — like fever, nausea, or pain anywhere else?",
-      },
-      {
-        key: "tried",
-        q: "Have you already tried anything for it, like a medication or home remedy?",
-      },
-      {
-        key: "alcohol_recent",
-        q: "In the last 24 hours, have you had any alcohol?",
-        handle: (a, { pushFollowup }) => {
-          if (isAffirmative(a)) {
-            pushFollowup({
-              key: "alcohol_detail",
-              q: "Roughly how much, and how long ago was your last drink?",
-            });
-            return a;
-          }
-          return isNegative(a) ? "None in last 24h" : a;
-        },
-      },
-      {
-        key: "smoking_recent",
-        q: "Any smoking or vaping in the last 24 hours?",
-        handle: (a) => (isNegative(a) ? "None in last 24h" : a),
-      },
-      {
-        key: "drugs_recent",
-        q: "Any recreational drugs or cannabis recently? Just so I can keep you safe — no judgment.",
-        handle: (a) => (isNegative(a) ? "None in last 24h" : a),
-      },
-    ];
+  // Minimal fallback probes if the AI probe call fails.
+  const fallbackProbes = (): Probe[] => [
+    { key: "duration", q: "How long has this been going on?" },
+    { key: "taken_last_24h", q: "Taken anything for it in the last 24 hours?" },
+  ];
 
-    // Conditional probes for missing profile data
-    if (isMissing(p.allergies)) {
-      probes.push({
-        key: "_profile_allergies",
-        q: "I don't have any allergies on file for you. Are there any medications or ingredients you're allergic to?",
-        handle: (a, { profilePatch }) => {
-          profilePatch.allergies = isNegative(a) ? "None" : a;
-          return a;
-        },
+  const fetchProbes = async (p: Profile, symptomText: string): Promise<Probe[]> => {
+    try {
+      const res = await askProbes({
+        data: { profile: profileSummary(p), symptom: symptomText },
       });
+      return res.probes.map((pr) => ({ key: pr.key, q: pr.q }));
+    } catch {
+      return fallbackProbes();
     }
-    if (isMissing(p.prescriptions)) {
-      probes.push({
-        key: "_profile_prescriptions",
-        q: "Are you currently taking any prescription medications?",
-        handle: (a, { profilePatch }) => {
-          profilePatch.prescriptions = isNegative(a) ? "None" : a;
-          return a;
-        },
-      });
-    }
-    if (!p.conditions?.length && !p.other_condition) {
-      probes.push({
-        key: "_profile_conditions",
-        q: "Do you have any ongoing health conditions I should know about, like asthma, diabetes, or high blood pressure?",
-        handle: (a, { profilePatch }) => {
-          if (!isNegative(a)) profilePatch.other_condition = a;
-          return a;
-        },
-      });
-    }
-    if (isMissing(p.lifestyle?.alcohol)) {
-      probes.push({
-        key: "_profile_alcohol",
-        q: "In general, how often do you drink alcohol — never, occasionally, or regularly?",
-        handle: (a, { lifestylePatch }) => {
-          lifestylePatch.alcohol = a;
-          return a;
-        },
-      });
-    }
-    if (isMissing(p.lifestyle?.smoking)) {
-      probes.push({
-        key: "_profile_smoking",
-        q: "And in general, do you smoke — never, formerly, or currently?",
-        handle: (a, { lifestylePatch }) => {
-          lifestylePatch.smoking = a;
-          return a;
-        },
-      });
-    }
-    return probes;
   };
+
 
 
   const runVoiceFlow = async () => {
