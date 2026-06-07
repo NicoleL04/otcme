@@ -84,16 +84,25 @@ function SymptomPage() {
 
   const goSummary = () => {
     if (!result) return;
+    // Rank: green → yellow → grey
+    const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
+    const sorted = {
+      ...result,
+      categories: [...result.categories].sort(
+        (a, b) => (rank[a.status] ?? 99) - (rank[b.status] ?? 99),
+      ),
+    };
+    setResult(sorted);
     sessionStorage.setItem(
       "otcandme_summary",
       JSON.stringify({
         type: "symptom",
         query: symptom,
         clarification: answers,
-        recommendation: result,
+        recommendation: sorted,
       }),
     );
-    const top = result.categories.find((c) => c.status === "green") ?? result.categories[0];
+    const top = sorted.categories[0];
     addHistory({
       profile_id: profile.id,
       type: "symptom",
@@ -102,8 +111,9 @@ function SymptomPage() {
         ? `${top.category_name} — ${top.status === "green" ? "Safe" : top.status === "yellow" ? "Consult pharmacist" : "Not recommended"}`
         : "No recommendation",
       status: top?.status,
-      payload: result,
+      payload: sorted,
       clarification: answers,
+      profile_snapshot: profile,
     });
     navigate({ to: "/summary" });
   };
