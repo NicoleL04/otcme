@@ -93,6 +93,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "OTC&Me — AI OTC aisle assistant" },
+      { name: "description", content: "OTC&Me Connect is a web app that provides personalized over-the-counter medication recommendations and health insights." },
+      { property: "og:description", content: "OTC&Me Connect is a web app that provides personalized over-the-counter medication recommendations and health insights." },
+      { name: "twitter:description", content: "OTC&Me Connect is a web app that provides personalized over-the-counter medication recommendations and health insights." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d387eb15-4c72-4e16-8d70-5010db864d46/id-preview-ff3323b5--d7313315-d63c-40b3-af96-2aa2f27b56d2.lovable.app-1780860524982.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d387eb15-4c72-4e16-8d70-5010db864d46/id-preview-ff3323b5--d7313315-d63c-40b3-af96-2aa2f27b56d2.lovable.app-1780860524982.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
