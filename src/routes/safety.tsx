@@ -106,6 +106,7 @@ function SafetyPage() {
       query: medName,
       summary: `${result.safety_status === "Yes" ? "Safe" : result.safety_status === "Caution" ? "Caution" : "Avoid"} — ${result.explanation.split(". ")[0]}.`,
       status: result.safety_status,
+      payload: result,
     });
     navigate({ to: "/summary" });
   };

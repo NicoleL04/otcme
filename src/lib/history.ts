@@ -6,7 +6,14 @@ export type HistoryEntry = {
   summary: string; // short one-liner outcome
   status?: string; // e.g. "Safe", "Caution"
   created_at: number;
+  // Full payload so we can re-render the previous consultation page
+  payload?: unknown;
+  clarification?: string;
 };
+
+export function getHistoryEntry(id: string): HistoryEntry | undefined {
+  return getHistory().find((h) => h.id === id);
+}
 
 const KEY = "otcandme_history";
 
