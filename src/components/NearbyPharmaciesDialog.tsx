@@ -10,7 +10,7 @@ type Props = {
   examples: string[];
 };
 
-const STOCK_META: Record<StockLevel, { label: string; cls: string; icon: JSX.Element }> = {
+const STOCK_META: Record<StockLevel, { label: string; cls: string; icon: ReactNode }> = {
   in: {
     label: "In stock",
     cls: "bg-success/15 text-success border-success/30",
