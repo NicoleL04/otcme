@@ -23,8 +23,8 @@ import {
   Tag,
   Loader2,
   Mic,
-  MicOff,
-  Volume2,
+  Keyboard,
+  X,
   Square,
 } from "lucide-react";
 import { toast } from "sonner";
