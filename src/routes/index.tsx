@@ -150,27 +150,22 @@ function Home() {
           ) : (
             <ul className="space-y-2">
               {history.map((h) => (
-                <li
-                  key={h.id}
-                  className="rounded-xl border bg-card p-3 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {h.type === "symptom" ? "Symptom check" : "Safety check"} ·{" "}
-                        {new Date(h.created_at).toLocaleDateString()}
-                      </p>
-                      <p className="mt-0.5 truncate text-sm font-medium text-navy">{h.query}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
-                        {h.summary}
-                      </p>
-                    </div>
-                    {h.status && (
-                      <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[11px] font-medium text-navy">
-                        {h.status}
-                      </span>
-                    )}
-                  </div>
+                <li key={h.id}>
+                  <button
+                    onClick={() =>
+                      navigate({ to: "/history/$id", params: { id: h.id } })
+                    }
+                    className="block w-full rounded-xl border bg-card p-3 text-left shadow-sm transition hover:border-primary hover:shadow-md"
+                  >
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {h.type === "symptom" ? "Symptom check" : "Safety check"} ·{" "}
+                      {new Date(h.created_at).toLocaleDateString()}
+                    </p>
+                    <p className="mt-0.5 truncate text-sm font-medium text-navy">{h.query}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                      {h.summary}
+                    </p>
+                  </button>
                 </li>
               ))}
             </ul>
