@@ -54,7 +54,15 @@ function Home() {
               <h1 className="text-2xl font-semibold">{profile.profile_name}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 Age {profile.age} • {profile.gender}
+                {profile.height && profile.weight ? ` • ${profile.height} / ${profile.weight}` : ""}
               </p>
+
+              {profile.lifestyle && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Smoking: {profile.lifestyle.smoking || "—"} • Alcohol: {profile.lifestyle.alcohol || "—"} • Drugs: {profile.lifestyle.drugs || "—"}
+                </p>
+              )}
+
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {conditions.length === 0 && (
                   <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
@@ -69,6 +77,21 @@ function Home() {
                     {c}
                   </span>
                 ))}
+                {profile.prescriptions && (
+                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                    Rx: {profile.prescriptions}
+                  </span>
+                )}
+                {profile.allergies && (
+                  <span className="rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
+                    Allergies: {profile.allergies}
+                  </span>
+                )}
+                {profile.home_meds && (
+                  <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning-foreground">
+                    Home: {profile.home_meds}
+                  </span>
+                )}
               </div>
             </div>
           </div>
