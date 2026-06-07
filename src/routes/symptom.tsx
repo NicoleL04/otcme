@@ -50,7 +50,8 @@ function SymptomPage() {
   const [questions, setQuestions] = useState("");
   const [answers, setAnswers] = useState("");
   const [result, setResult] = useState<Recommendation | null>(null);
-  const [voiceActive, setVoiceActive] = useState(false);
+  const [inputMode, setInputMode] = useState<"type" | "speak">("type");
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const voice = useVoiceAssistant();
   const voiceSupported = isVoiceSupported();
 
@@ -62,104 +63,30 @@ function SymptomPage() {
 
   if (!profile) return null;
 
-  const runVoiceFlow = async () => {
-    if (!profile) return;
-    setVoiceActive(true);
+  const startVoiceCapture = async () => {
+    setVoiceOpen(true);
     try {
-      // Greeting + ask symptom
-      await voice.speak(
-        "Hi! I'm your O T C and Me assistant. In a few words, what symptom or illness can I help you with today?",
-      );
-      let symptomText = "";
-      for (let attempt = 0; attempt < 3 && !symptomText; attempt++) {
-        try {
-          symptomText = await voice.listen();
-        } catch {
-          // ignore
-        }
-        if (!symptomText && attempt < 2) {
-          await voice.speak("Sorry, I didn't catch that. Could you say it again?");
-        }
+      const text = await voice.listen();
+      if (text) {
+        setSymptom((prev) => (prev ? `${prev} ${text}`.trim() : text));
       }
-      if (!symptomText) {
-        await voice.speak("I'm having trouble hearing you. Let's try typing instead.");
-        setVoiceActive(false);
-        return;
-      }
-      setSymptom(symptomText);
-      await voice.speak(`Got it. You said: ${symptomText}. Let me ask you a quick follow-up.`);
-
-      // Clarifying questions
-      setStage("loading-q");
-      const qRes = await askClarify({
-        data: { profile: profileSummary(profile), symptom: symptomText },
-      });
-      setQuestions(qRes.questions);
-      setStage("clarify");
-      await voice.speak(qRes.questions);
-
-      let answerText = "";
-      for (let attempt = 0; attempt < 2 && !answerText; attempt++) {
-        try {
-          answerText = await voice.listen();
-        } catch {
-          // ignore
-        }
-        if (!answerText && attempt < 1) {
-          await voice.speak("Could you repeat that for me?");
-        }
-      }
-      setAnswers(answerText);
-      await voice.speak(
-        answerText
-          ? `Thanks. Finding the safest options for you now.`
-          : "No problem. Let me find some options based on what you told me.",
-      );
-
-      // Recommendation
-      setStage("loading-r");
-      const r = await askRec({
-        data: {
-          profile: profileSummary(profile),
-          symptom: symptomText,
-          clarification: answerText || "(no further detail)",
-        },
-      });
-      const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
-      const sorted = {
-        ...r,
-        categories: [...r.categories].sort(
-          (a, b) => (rank[a.status] ?? 99) - (rank[b.status] ?? 99),
-        ),
-      };
-      setResult(sorted);
-      setStage("result");
-
-      const top = sorted.categories[0];
-      if (top) {
-        const label =
-          top.status === "green"
-            ? "is generally safe for you"
-            : top.status === "yellow"
-              ? "may be okay, but please check with a pharmacist first"
-              : "is not recommended for you";
-        await voice.speak(
-          `Your top option is ${top.category_name}. It ${label}. ${top.reason} You can see all options on screen, or tap any card to learn more.`,
-        );
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Voice flow failed";
-      toast.error(msg);
-      await voice.speak("Sorry, something went wrong. You can continue by typing.");
+    } catch {
+      // ignored — overlay close handles UI
     } finally {
-      setVoiceActive(false);
+      setVoiceOpen(false);
+      setInputMode("type");
     }
   };
 
-  const stopVoice = () => {
+  const cancelVoiceCapture = () => {
     voice.stopListening();
     voice.stopSpeaking();
-    setVoiceActive(false);
+    setVoiceOpen(false);
+  };
+
+  const stopVoiceCapture = () => {
+    // Triggers recognition.onend which resolves listen() with final text
+    voice.stopListening();
   };
 
   const submitSymptom = async () => {
@@ -206,7 +133,6 @@ function SymptomPage() {
 
   const goSummary = () => {
     if (!result) return;
-    // Rank: green → yellow → grey
     const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
     const sorted = {
       ...result,
@@ -259,76 +185,103 @@ function SymptomPage() {
         {stage === "input" && (
           <div className="mt-6 rounded-2xl border bg-card p-6 shadow-sm">
             {voiceSupported && (
-              <div className="mb-4 rounded-xl border border-primary/30 bg-primary/5 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-navy">
-                      Talk to OTC&amp;Me instead
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      Hands-free voice conversation — one question at a time, no typing needed.
-                    </p>
-                  </div>
-                  {voiceActive ? (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={stopVoice}
-                    >
-                      <Square className="h-4 w-4" /> Stop
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={runVoiceFlow}
-                      disabled={voiceActive}
-                    >
-                      <Mic className="h-4 w-4" /> Start voice
-                    </Button>
-                  )}
-                </div>
-                {voiceActive && (
-                  <VoiceStatus
-                    speaking={voice.speaking}
-                    listening={voice.listening}
-                    interim={voice.interim}
-                  />
-                )}
+              <div
+                role="tablist"
+                aria-label="Input mode"
+                className="mb-5 inline-flex rounded-full border bg-muted p-1"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={inputMode === "type"}
+                  onClick={() => setInputMode("type")}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+                    inputMode === "type"
+                      ? "bg-card text-navy shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Keyboard className="h-4 w-4" /> Type Symptoms
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={inputMode === "speak"}
+                  onClick={() => setInputMode("speak")}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+                    inputMode === "speak"
+                      ? "bg-card text-navy shadow"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Mic className="h-4 w-4" /> Speak Symptoms
+                </button>
               </div>
             )}
-            <label className="text-sm font-medium">Describe your symptom or illness</label>
-            <Textarea
-              autoFocus
-              placeholder="e.g. runny nose and sore throat for 2 days"
-              value={symptom}
-              onChange={(e) => setSymptom(e.target.value)}
-              className="mt-2 min-h-[100px]"
-              disabled={voiceActive}
-            />
-            <div className="mt-4 flex justify-end">
-              <Button onClick={submitSymptom} disabled={!symptom.trim() || voiceActive}>
+
+            <div key={inputMode} className="animate-fade-in">
+              {inputMode === "type" || !voiceSupported ? (
+                <>
+                  <label className="text-sm font-medium">
+                    Describe your symptom or illness
+                  </label>
+                  <Textarea
+                    autoFocus
+                    placeholder="e.g. runny nose and sore throat for 2 days"
+                    value={symptom}
+                    onChange={(e) => setSymptom(e.target.value)}
+                    className="mt-2 min-h-[120px]"
+                  />
+                </>
+              ) : (
+                <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-6 text-center">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                    <Mic className="h-8 w-8 text-primary" />
+                  </div>
+                  <p className="mt-3 text-sm font-semibold text-navy">
+                    Tell me what's going on — in your own words
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Tap below and start talking. I'll pop up captions so you can see what I hear.
+                  </p>
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={startVoiceCapture}
+                    className="mt-4 rounded-full px-6"
+                  >
+                    <Mic className="h-5 w-5" /> Start Voice
+                  </Button>
+                  {symptom && (
+                    <div className="mt-5 rounded-lg border bg-card p-3 text-left">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Transcript so far
+                      </p>
+                      <p className="mt-1 text-sm">{symptom}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <Button onClick={submitSymptom} disabled={!symptom.trim()}>
                 Continue <Send className="h-4 w-4" />
               </Button>
             </div>
           </div>
         )}
 
-        {voiceActive && stage !== "input" && (
-          <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3">
-            <div className="flex items-center justify-between gap-3">
-              <VoiceStatus
-                speaking={voice.speaking}
-                listening={voice.listening}
-                interim={voice.interim}
-              />
-              <Button type="button" variant="destructive" size="sm" onClick={stopVoice}>
-                <Square className="h-4 w-4" /> Stop voice
-              </Button>
-            </div>
-          </div>
+        {voiceOpen && (
+          <VoiceOverlay
+            listening={voice.listening}
+            interim={voice.interim}
+            level={voice.level}
+            onStop={stopVoiceCapture}
+            onCancel={cancelVoiceCapture}
+          />
         )}
+
 
         {stage === "loading-q" && <LoaderCard label="Thinking of clarifying questions…" />}
 
