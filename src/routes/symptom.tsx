@@ -497,33 +497,112 @@ function ProductExplorer({
   );
 }
 
-function VoiceStatus({
-  speaking,
+function VoiceOverlay({
   listening,
   interim,
+  level,
+  onStop,
+  onCancel,
 }: {
-  speaking: boolean;
   listening: boolean;
   interim: string;
+  level: number;
+  onStop: () => void;
+  onCancel: () => void;
 }) {
+  // Build 24 animated bars whose height responds to mic level
+  const bars = Array.from({ length: 24 });
   return (
-    <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-      {speaking ? (
-        <>
-          <Volume2 className="h-4 w-4 animate-pulse text-primary" />
-          <span>Assistant is speaking…</span>
-        </>
-      ) : listening ? (
-        <>
-          <Mic className="h-4 w-4 animate-pulse text-primary" />
-          <span>Listening{interim ? `: "${interim}"` : "…"}</span>
-        </>
-      ) : (
-        <>
-          <MicOff className="h-4 w-4" />
-          <span>Thinking…</span>
-        </>
-      )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy/80 backdrop-blur-sm animate-fade-in">
+      <div
+        className="relative mx-4 w-full max-w-lg origin-center rounded-3xl bg-card p-8 shadow-2xl animate-scale-in"
+        style={{ animationDuration: "320ms" }}
+      >
+        <button
+          type="button"
+          onClick={onCancel}
+          aria-label="Cancel"
+          className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <p className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {listening ? "Listening" : "Starting…"}
+        </p>
+
+        {/* Pulsing mic with rings */}
+        <div className="relative mx-auto mt-6 flex h-40 w-40 items-center justify-center">
+          <span
+            className="absolute inset-0 rounded-full bg-primary/20"
+            style={{
+              transform: `scale(${1 + level * 0.6})`,
+              transition: "transform 80ms linear",
+            }}
+          />
+          <span
+            className="absolute inset-4 rounded-full bg-primary/30"
+            style={{
+              transform: `scale(${1 + level * 0.4})`,
+              transition: "transform 80ms linear",
+            }}
+          />
+          <span className="absolute inset-8 animate-pulse rounded-full bg-primary/40" />
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
+            <Mic className="h-9 w-9" />
+          </div>
+        </div>
+
+        {/* Waveform */}
+        <div className="mx-auto mt-6 flex h-12 max-w-xs items-center justify-center gap-1">
+          {bars.map((_, i) => {
+            const center = (bars.length - 1) / 2;
+            const dist = Math.abs(i - center) / center; // 0..1
+            const base = 0.18 + (1 - dist) * 0.35;
+            const h = Math.max(6, Math.min(48, (base + level * (1 - dist) * 1.6) * 48));
+            return (
+              <span
+                key={i}
+                className="w-1 rounded-full bg-primary"
+                style={{
+                  height: `${h}px`,
+                  opacity: 0.5 + level * 0.5,
+                  transition: "height 80ms linear, opacity 120ms linear",
+                }}
+              />
+            );
+          })}
+        </div>
+
+        {/* Action buttons */}
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            className="rounded-full"
+          >
+            <X className="h-4 w-4" /> Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={onStop}
+            className="rounded-full"
+          >
+            <Square className="h-4 w-4" /> Stop Recording
+          </Button>
+        </div>
+
+        {/* Live caption strip */}
+        <div className="mt-8 min-h-[64px] rounded-xl bg-navy/95 px-4 py-3 text-center">
+          <p className="text-xs uppercase tracking-wider text-white/50">Live captions</p>
+          <p className="mt-1 text-base font-medium leading-snug text-white">
+            {interim || (listening ? "…" : "Getting ready…")}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
+
