@@ -41,6 +41,10 @@ export function isVoiceSupported() {
 export function useVoiceAssistant() {
   const recRef = useRef<SpeechRecognitionInstance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Cancellation generation — bumped by stopSpeaking/stopListening so that
+  // any in-flight speak() (waiting on fetch) or listen() that started before
+  // the stop will resolve immediately instead of playing/recording further.
+  const genRef = useRef(0);
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [interim, setInterim] = useState("");
@@ -64,6 +68,7 @@ export function useVoiceAssistant() {
   }, []);
 
   const stopSpeaking = useCallback(() => {
+    genRef.current += 1;
     if (audioRef.current) {
       try {
         audioRef.current.pause();
@@ -78,6 +83,8 @@ export function useVoiceAssistant() {
 
   const speak = useCallback(async (text: string): Promise<void> => {
     if (typeof window === "undefined" || !text.trim()) return;
+    const gen = genRef.current;
+
     // Stop any currently playing audio
     if (audioRef.current) {
       try {
@@ -98,24 +105,51 @@ export function useVoiceAssistant() {
       return;
     }
 
+    // Bail out if a stop happened while we were waiting on the fetch
+    if (gen !== genRef.current) {
+      setSpeaking(false);
+      return;
+    }
+
     return new Promise<void>((resolve) => {
       const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
       audioRef.current = audio;
-      audio.onplay = () => setSpeaking(true);
-      audio.onended = () => {
+      const finish = () => {
         setSpeaking(false);
         if (audioRef.current === audio) audioRef.current = null;
         resolve();
       };
-      audio.onerror = () => {
-        setSpeaking(false);
-        if (audioRef.current === audio) audioRef.current = null;
-        resolve();
+      audio.onplay = () => {
+        // If stop happened between fetch and play, halt immediately
+        if (gen !== genRef.current) {
+          try {
+            audio.pause();
+          } catch {
+            // ignore
+          }
+          finish();
+          return;
+        }
+        setSpeaking(true);
       };
+      audio.onended = finish;
+      audio.onerror = finish;
+      // Poll for cancellation while playing so a mid-playback stop resolves
+      // the awaited promise (pause() alone never fires onended).
+      const interval = window.setInterval(() => {
+        if (gen !== genRef.current || audio.paused) {
+          window.clearInterval(interval);
+          finish();
+        }
+      }, 150);
+      const origFinish = finish;
+      // Wrap finish to also clear the interval
+      const cleanup = () => window.clearInterval(interval);
+      audio.addEventListener("ended", cleanup, { once: true });
+      audio.addEventListener("error", cleanup, { once: true });
       audio.play().catch(() => {
-        setSpeaking(false);
-        if (audioRef.current === audio) audioRef.current = null;
-        resolve();
+        cleanup();
+        origFinish();
       });
     });
   }, []);
@@ -132,6 +166,7 @@ export function useVoiceAssistant() {
       } catch {
         // ignore
       }
+      const gen = genRef.current;
       const rec = new Ctor();
       rec.lang = "en-US";
       rec.interimResults = true;
@@ -155,7 +190,11 @@ export function useVoiceAssistant() {
       rec.onend = () => {
         setListening(false);
         setInterim("");
-        resolve(finalText.trim());
+        if (gen !== genRef.current) {
+          resolve("");
+        } else {
+          resolve(finalText.trim());
+        }
       };
 
       recRef.current = rec;
@@ -170,11 +209,13 @@ export function useVoiceAssistant() {
   }, []);
 
   const stopListening = useCallback(() => {
+    genRef.current += 1;
     try {
-      recRef.current?.stop();
+      recRef.current?.abort();
     } catch {
       // ignore
     }
+    setListening(false);
   }, []);
 
   return { speak, stopSpeaking, listen, stopListening, listening, speaking, interim };
