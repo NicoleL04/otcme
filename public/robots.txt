@@ -1,2 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /settings
+Disallow: /summary
+Disallow: /recommendations
+Disallow: /history/
+
+Sitemap: https://me-otc-trade.lovable.app/sitemap.xml
