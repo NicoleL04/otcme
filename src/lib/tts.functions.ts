@@ -4,7 +4,12 @@ import { z } from "zod";
 const VOICE_ID = "JAATlCsz6GCH2vUjFcLg";
 
 export const synthesizeSpeech = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ text: z.string().min(1).max(5000) }))
+  .inputValidator(
+    z.object({
+      text: z.string().min(1).max(5000),
+      language: z.enum(["en", "zh"]).optional(),
+    }),
+  )
   .handler(async ({ data }): Promise<{ audioBase64: string }> => {
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) throw new Error("ELEVENLABS_API_KEY not configured");
@@ -20,9 +25,11 @@ export const synthesizeSpeech = createServerFn({ method: "POST" })
         body: JSON.stringify({
           text: data.text,
           model_id: "eleven_turbo_v2_5",
+          language_code: data.language === "zh" ? "zh" : "en",
         }),
       },
     );
+
 
     if (!res.ok) {
       const err = await res.text();
