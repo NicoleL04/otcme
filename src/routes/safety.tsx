@@ -171,7 +171,7 @@ function SafetyPage() {
             {preview ? (
               <img
                 src={preview}
-                alt="medication"
+                alt="Uploaded medication packaging"
                 className="max-h-40 rounded-md object-contain"
               />
             ) : (
