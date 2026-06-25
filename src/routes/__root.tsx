@@ -86,6 +86,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Built by pharmacists. OTC&Me helps you choose safer over-the-counter medicine based on your health profile.",
       },
       { name: "author", content: "OTC&Me" },
+      { property: "og:site_name", content: "OTC&Me" },
       { property: "og:title", content: "OTC&Me — AI OTC aisle assistant" },
       {
         property: "og:description",
@@ -93,11 +94,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Pharmacist-built guidance for safer over-the-counter medicine choices.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "OTC&Me — AI OTC aisle assistant" },
-      { name: "description", content: "OTC&Me Connect is a web app that provides personalized over-the-counter medication recommendations and health insights." },
-      { property: "og:description", content: "OTC&Me Connect is a web app that provides personalized over-the-counter medication recommendations and health insights." },
-      { name: "twitter:description", content: "OTC&Me Connect is a web app that provides personalized over-the-counter medication recommendations and health insights." },
+      { name: "twitter:description", content: "Pharmacist-built guidance for safer over-the-counter medicine choices." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/832b4908-a7e7-4132-ae91-fa02775c3be8" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/832b4908-a7e7-4132-ae91-fa02775c3be8" },
     ],
@@ -106,6 +105,30 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+      },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              name: "OTC&Me",
+              url: "https://me-otc-trade.lovable.app",
+              description:
+                "Pharmacist-built AI assistant for safer over-the-counter medicine choices.",
+            },
+            {
+              "@type": "WebSite",
+              name: "OTC&Me",
+              url: "https://me-otc-trade.lovable.app",
+              description:
+                "Personalized over-the-counter medication recommendations and drug-interaction checks built by pharmacists.",
+            },
+          ],
+        }),
       },
     ],
   }),
