@@ -107,7 +107,7 @@ function SafetyPage() {
       profile_id: profile.id,
       type: "safety",
       query: medName,
-      summary: `${result.safety_status === "Yes" ? "Safe" : result.safety_status === "Caution" ? "Caution" : "Avoid"} — ${result.explanation.split(". ")[0]}.`,
+      summary: `${result.safety_status === "Yes" ? t("saf_yes") : result.safety_status === "Caution" ? t("saf_caution") : t("saf_no")} — ${result.explanation.split(". ")[0]}.`,
       status: result.safety_status,
       payload: result,
       profile_snapshot: profile,
@@ -123,14 +123,14 @@ function SafetyPage() {
           onClick={() => navigate({ to: "/" })}
           className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-navy"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to dashboard
+          <ArrowLeft className="h-4 w-4" /> {t("back_to_dashboard")}
         </button>
 
-        <h1 className="text-2xl font-semibold">Is this medicine safe for me?</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Profile: {profile.profile_name}</p>
+        <h1 className="text-2xl font-semibold">{t("saf_title")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("sym_profile", { name: profile.profile_name })}</p>
 
         <div className="mt-6 rounded-2xl border bg-card p-6 shadow-sm">
-          <p className="text-sm font-medium">Upload a photo of the label or box</p>
+          <p className="text-sm font-medium">{t("saf_upload")}</p>
           <input
             ref={fileRef}
             type="file"
@@ -155,26 +155,26 @@ function SafetyPage() {
             ) : (
               <>
                 <Camera className="h-8 w-8 text-muted-foreground" />
-                <p className="text-sm font-medium">Tap to take a photo or upload</p>
-                <p className="text-xs text-muted-foreground">PNG, JPG up to 10MB</p>
+                <p className="text-sm font-medium">{t("saf_tap_photo")}</p>
+                <p className="text-xs text-muted-foreground">{t("saf_file_types")}</p>
               </>
             )}
           </button>
           {extracting && (
             <p className="mt-2 text-center text-xs text-muted-foreground">
-              Reading the label…
+              {t("saf_reading")}
             </p>
           )}
 
           <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" /> OR <span className="h-px flex-1 bg-border" />
+            <span className="h-px flex-1 bg-border" /> {t("saf_or")} <span className="h-px flex-1 bg-border" />
           </div>
 
-          <label className="text-sm font-medium">Type the medication name</label>
+          <label className="text-sm font-medium">{t("saf_type_name")}</label>
           <Input
             value={medName}
             onChange={(e) => setMedName(e.target.value)}
-            placeholder="e.g. Ibuprofen 200mg"
+            placeholder={t("saf_name_ph")}
             className="mt-2"
           />
 
@@ -183,13 +183,13 @@ function SafetyPage() {
             disabled={loading || extracting || !medName.trim()}
             className="mt-4 w-full"
           >
-            <Upload className="h-4 w-4" /> Check safety
+            <Upload className="h-4 w-4" /> {t("saf_check")}
           </Button>
         </div>
 
         {loading && (
           <div className="mt-6 rounded-2xl border bg-card p-6 shadow-sm">
-            <p className="mb-3 text-sm text-muted-foreground">Checking against your profile…</p>
+            <p className="mb-3 text-sm text-muted-foreground">{t("saf_checking")}</p>
             <div className="space-y-2">
               <Skeleton className="h-4 w-2/3" />
               <Skeleton className="h-4 w-full" />
