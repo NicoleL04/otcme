@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useVoiceAssistant, isVoiceSupported } from "@/hooks/useVoiceAssistant";
+import { useT, useLanguage } from "@/lib/i18n";
 
 
 export const Route = createFileRoute("/symptom")({
@@ -57,6 +58,8 @@ type Probe = {
 
 function SymptomPage() {
   const navigate = useNavigate();
+  const t = useT();
+  const { language } = useLanguage();
   const askClarify = useServerFn(getClarifyingQuestions);
   const askRec = useServerFn(getRecommendation);
   const askProbes = useServerFn(getSymptomProbes);
@@ -104,14 +107,14 @@ function SymptomPage() {
 
   // Minimal fallback probes if the AI probe call fails.
   const fallbackProbes = (): Probe[] => [
-    { key: "duration", q: "How long has this been going on?" },
-    { key: "taken_last_24h", q: "Taken anything for it in the last 24 hours?" },
+    { key: "duration", q: language === "zh" ? "这种情况持续多久了?" : "How long has this been going on?" },
+    { key: "taken_last_24h", q: language === "zh" ? "过去24小时内吃过什么药吗?" : "Taken anything for it in the last 24 hours?" },
   ];
 
   const fetchProbes = async (p: Profile, symptomText: string): Promise<Probe[]> => {
     try {
       const res = await askProbes({
-        data: { profile: profileSummary(p), symptom: symptomText },
+        data: { profile: profileSummary(p), symptom: symptomText, language },
       });
       return res.probes.map((pr) => ({ key: pr.key, q: pr.q }));
     } catch {
@@ -155,9 +158,7 @@ function SymptomPage() {
         }
         if (voice.isCancelled()) throw new Error("__voice_cancelled__");
         if (!answer && attempt < retries) {
-          const r =
-            opts.rephrase ||
-            "Sorry, I didn't quite catch that. Could you say it once more?";
+          const r = opts.rephrase || t("voice_didnt_catch");
           setChat((c) => [...c, { role: "assistant", text: r }]);
           await voice.speak(r);
           if (voice.isCancelled()) throw new Error("__voice_cancelled__");
@@ -169,19 +170,17 @@ function SymptomPage() {
 
     try {
       // 1. Greeting + main symptom
-      const symptomText = await askOneShown("Hello, how can I help you today?", {
+      const symptomText = await askOneShown(t("voice_greeting"), {
         retries: 2,
-        rephrase: "No worries — in your own words, what's bothering you today?",
+        rephrase: t("voice_rephrase_main"),
       });
       if (!symptomText) {
-        await say("I'm having trouble hearing you. Let's try typing instead.");
+        await say(t("voice_cant_hear"));
         setVoiceActive(false);
         return;
       }
       setSymptom(symptomText);
-      await say(
-        "Thanks for sharing. I'd like to ask a few quick questions so I can point you to the safest option.",
-      );
+      await say(t("voice_thanks_sharing"));
 
 
       // 2. Dynamic, profile-aware probes — short, varied, skip what's known.
@@ -197,9 +196,7 @@ function SymptomPage() {
 
 
       // 5. Confirm before searching
-      await say(
-        "Great, I have what I need. Give me a moment to find the safest options for you.",
-      );
+      await say(t("voice_have_what_need"));
 
 
 
@@ -221,7 +218,7 @@ function SymptomPage() {
       setStage("loading-q");
       try {
         const qRes = await askClarify({
-          data: { profile: profileSummary(updatedProfile), symptom: symptomText },
+          data: { profile: profileSummary(updatedProfile), symptom: symptomText, language },
         });
         setQuestions(qRes.questions);
       } catch {
@@ -235,6 +232,7 @@ function SymptomPage() {
           profile: profileSummary(updatedProfile),
           symptom: symptomText,
           clarification: clarificationText || "(no further detail)",
+          language,
         },
       });
       const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
@@ -266,7 +264,7 @@ function SymptomPage() {
         const msg = e instanceof Error ? e.message : "Voice flow failed";
         toast.error(msg);
         try {
-          await say("Sorry, something went wrong. You can continue by typing.");
+          await say(t("voice_error"));
         } catch {
           // ignore
         }
@@ -286,12 +284,10 @@ function SymptomPage() {
     if (!symptom.trim()) return;
     setProbeAnswers({});
     setPatches({ profile: {}, lifestyle: {} });
+    const thinkingMsg = t("sym_thanks_thinking");
     setChat([
       { role: "user", text: symptom },
-      {
-        role: "assistant",
-        text: "Thanks. Thinking of a few quick questions…",
-      },
+      { role: "assistant", text: thinkingMsg },
     ]);
     setAnswers("");
     setTextInput("");
@@ -299,11 +295,8 @@ function SymptomPage() {
     const probes = await fetchProbes(profile, symptom);
     setProbeQueue(probes);
     setChat((c) => [
-      ...c.filter((m) => m.text !== "Thanks. Thinking of a few quick questions…"),
-      {
-        role: "assistant",
-        text: "Thanks for sharing. A few quick questions so I can point you to the safest option.",
-      },
+      ...c.filter((m) => m.text !== thinkingMsg),
+      { role: "assistant", text: t("sym_thanks_short") },
       { role: "assistant", text: probes[0].q },
     ]);
     setStage("clarify");
@@ -336,10 +329,7 @@ function SymptomPage() {
       setProfile(updatedProfile);
       setChat((c) => [
         ...c,
-        {
-          role: "assistant",
-          text: "Thanks — I've saved that to your profile so you don't have to repeat it next time.",
-        },
+        { role: "assistant", text: t("sym_saved_to_profile") },
       ]);
     }
 
@@ -353,7 +343,7 @@ function SymptomPage() {
     setStage("loading-q");
     try {
       const qRes = await askClarify({
-        data: { profile: profileSummary(updatedProfile), symptom },
+        data: { profile: profileSummary(updatedProfile), symptom, language },
       });
       setQuestions(qRes.questions);
     } catch {
@@ -367,6 +357,7 @@ function SymptomPage() {
           profile: profileSummary(updatedProfile),
           symptom,
           clarification: clarificationText || "(no further detail)",
+          language,
         },
       });
       const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
@@ -424,10 +415,7 @@ function SymptomPage() {
     } else {
       setChat((c) => [
         ...c,
-        {
-          role: "assistant",
-          text: "Great, I have what I need. Finding the safest options for you now.",
-        },
+        { role: "assistant", text: t("sym_have_what_need") },
       ]);
       void finalizeTextFlow(newAnswers, newPatches);
     }
@@ -444,12 +432,12 @@ function SymptomPage() {
           onClick={() => navigate({ to: "/" })}
           className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-navy"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to dashboard
+          <ArrowLeft className="h-4 w-4" /> {t("back_to_dashboard")}
         </button>
 
-        <h1 className="text-2xl font-semibold">What's the symptom?</h1>
+        <h1 className="text-2xl font-semibold">{t("sym_title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Profile: {profile.profile_name}
+          {t("sym_profile", { name: profile.profile_name })}
         </p>
 
         <div className="mt-6 rounded-2xl border bg-card p-6 shadow-sm">
@@ -458,10 +446,10 @@ function SymptomPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-navy">
-                    Talk to OTC&amp;Me instead
+                    {t("sym_voice_title")}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Hands-free voice conversation — one question at a time, no typing needed.
+                    {t("sym_voice_desc")}
                   </p>
                 </div>
                 {voiceActive ? (
@@ -471,7 +459,7 @@ function SymptomPage() {
                     size="sm"
                     onClick={stopVoice}
                   >
-                    <Square className="h-4 w-4" /> Stop
+                    <Square className="h-4 w-4" /> {t("sym_voice_stop")}
                   </Button>
                 ) : (
                   <Button
@@ -480,7 +468,7 @@ function SymptomPage() {
                     onClick={runVoiceFlow}
                     disabled={voiceActive}
                   >
-                    <Mic className="h-4 w-4" /> Start voice
+                    <Mic className="h-4 w-4" /> {t("sym_voice_start")}
                   </Button>
                 )}
               </div>
@@ -496,10 +484,10 @@ function SymptomPage() {
 
           {stage === "input" && !voiceActive && (
             <>
-              <label className="text-sm font-medium">Describe your symptom or illness</label>
+              <label className="text-sm font-medium">{t("sym_describe")}</label>
               <Textarea
                 autoFocus
-                placeholder="e.g. runny nose and sore throat for 2 days"
+                placeholder={t("sym_describe_ph")}
                 value={symptom}
                 onChange={(e) => setSymptom(e.target.value)}
                 className="mt-2 min-h-[100px]"
@@ -507,7 +495,7 @@ function SymptomPage() {
               />
               <div className="mt-4 flex justify-end">
                 <Button onClick={submitSymptom} disabled={!symptom.trim() || voiceActive}>
-                  Continue <Send className="h-4 w-4" />
+                  {t("continue")} <Send className="h-4 w-4" />
                 </Button>
               </div>
             </>
@@ -520,7 +508,7 @@ function SymptomPage() {
             <div className="flex flex-col overflow-hidden rounded-xl border bg-background">
               <div className="max-h-[55vh] min-h-[280px] flex-1 space-y-3 overflow-y-auto p-4">
                 {stage === "loading-q" && chat.length === 0 && (
-                  <LoaderCard label="Thinking of clarifying questions…" />
+                  <LoaderCard label={t("sym_loading_questions")} />
                 )}
                 {chat.map((m, i) =>
                   m.role === "user" ? (
@@ -535,16 +523,16 @@ function SymptomPage() {
                       key={i}
                       className="max-w-[85%] rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm"
                     >
-                      <p className="mb-1 text-xs font-semibold text-primary">OTC&amp;Me Assistant</p>
+                      <p className="mb-1 text-xs font-semibold text-primary">{t("sym_assistant")}</p>
                       <p className="whitespace-pre-wrap">{m.text}</p>
                     </div>
                   ),
                 )}
                 {stage === "loading-q" && chat.length > 0 && (
-                  <LoaderCard label="Reviewing your answers…" />
+                  <LoaderCard label={t("sym_loading_reviewing")} />
                 )}
                 {stage === "loading-r" && (
-                  <LoaderCard label="Finding the safest options for you…" />
+                  <LoaderCard label={t("sym_loading_finding")} />
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -553,7 +541,7 @@ function SymptomPage() {
                 <div className="border-t bg-card p-3">
                   <Textarea
                     autoFocus
-                    placeholder="Type your answer…"
+                    placeholder={t("sym_type_answer")}
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -566,10 +554,10 @@ function SymptomPage() {
                   />
                   <div className="mt-2 flex items-center justify-between">
                     <p className="text-xs text-muted-foreground">
-                      Question {Object.keys(probeAnswers).length + 1}
+                      {t("sym_question_n", { n: Object.keys(probeAnswers).length + 1 })}
                     </p>
                     <Button onClick={submitTextAnswer} disabled={!textInput.trim()}>
-                      Send <Send className="h-4 w-4" />
+                      {t("send")} <Send className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -610,22 +598,23 @@ function VoiceStatus({
   listening: boolean;
   interim: string;
 }) {
+  const t = useT();
   return (
     <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
       {speaking ? (
         <>
           <Volume2 className="h-4 w-4 animate-pulse text-primary" />
-          <span>Assistant is speaking…</span>
+          <span>{t("voice_speaking")}</span>
         </>
       ) : listening ? (
         <>
           <Mic className="h-4 w-4 animate-pulse text-primary" />
-          <span>Listening{interim ? `: "${interim}"` : "…"}</span>
+          <span>{t("voice_listening")}{interim ? `: "${interim}"` : "…"}</span>
         </>
       ) : (
         <>
           <MicOff className="h-4 w-4" />
-          <span>Thinking…</span>
+          <span>{t("voice_thinking")}</span>
         </>
       )}
     </div>

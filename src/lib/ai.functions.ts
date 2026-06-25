@@ -4,6 +4,15 @@ import { z } from "zod";
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
 
+const languageSchema = z.enum(["en", "zh"]).optional();
+
+function langInstruction(language?: "en" | "zh"): string {
+  if (language === "zh") {
+    return "\n\nIMPORTANT: Respond entirely in Simplified Chinese (简体中文). Use natural, patient-friendly Chinese medical terms (e.g. 布洛芬, 对乙酰氨基酚, 高血压, 糖尿病). All field values in JSON output — including category_name, reason, dosage_guidance, examples, explanation, and any text — must be in Chinese. Do not include English translations.";
+  }
+  return "";
+}
+
 type ChatMessage = {
   role: "system" | "user" | "assistant";
   content:
@@ -59,6 +68,7 @@ export const getClarifyingQuestions = createServerFn({ method: "POST" })
     z.object({
       profile: z.string(),
       symptom: z.string().min(1),
+      language: languageSchema,
     }),
   )
   .handler(async ({ data }) => {
@@ -70,7 +80,7 @@ export const getClarifyingQuestions = createServerFn({ method: "POST" })
 At least ONE of the questions MUST be a temporal/recency probe that the static profile would not capture — pick whichever is most relevant to the symptom (e.g. any medicine already taken today/in the last 24-72h, recent procedure or vaccination, recent alcohol use, new supplement, recent antibiotics, pregnancy/breastfeeding).
 
 Respond with ONLY the questions, plainly written, no preamble. Patient profile:
-${data.profile}`,
+${data.profile}${langInstruction(data.language)}`,
       },
       { role: "user", content: data.symptom },
     ]);
@@ -95,9 +105,11 @@ export const getSymptomProbes = createServerFn({ method: "POST" })
     z.object({
       profile: z.string(),
       symptom: z.string().min(1),
+      language: languageSchema,
     }),
   )
   .handler(async ({ data }) => {
+    const isZh = data.language === "zh";
     const content = await callGateway(
       [
         {
@@ -105,12 +117,13 @@ export const getSymptomProbes = createServerFn({ method: "POST" })
           content: `You are a clinical pharmacist assistant gathering quick context before recommending an OTC medication.
 
 Generate 3 to 5 SHORT follow-up questions about the symptom. Rules:
-- Each question is ONE sentence, ideally 6-12 words, plain conversational English.
+- Each question is ONE sentence, ideally 6-12 words${isZh ? ", written in natural Simplified Chinese" : ", plain conversational English"}.
 - DO NOT ask about anything already documented in the patient profile below (allergies, chronic conditions, prescription meds, smoking, alcohol, drug use, age, gender, weight). If a field shows a value other than "None", "Not reported", or empty, treat it as known.
 - ALWAYS include at least one time-sensitive question that the static profile cannot capture (e.g. duration, severity right now, anything already taken in the last 24 hours, recent fever, pregnancy/breastfeeding if relevant).
 - Tailor remaining questions to the specific symptom — do not use a fixed template.
 - Vary phrasing across calls; do not always start the same way.
-- Use snake_case keys that describe the question (e.g. "duration", "severity_now", "taken_last_24h").
+- Use snake_case keys that describe the question in English (e.g. "duration", "severity_now", "taken_last_24h"). Keys MUST be English snake_case regardless of question language.
+- The "q" field is the question text shown to the user — write it in ${isZh ? "Simplified Chinese" : "English"}.
 
 Output ONLY valid JSON:
 { "probes": [ { "key": "snake_case_key", "q": "Short question?" } ] }
@@ -146,6 +159,7 @@ export const getRecommendation = createServerFn({ method: "POST" })
       profile: z.string(),
       symptom: z.string(),
       clarification: z.string(),
+      language: languageSchema,
     }),
   )
   .handler(async ({ data }): Promise<Recommendation> => {
@@ -174,6 +188,7 @@ Output ONLY valid JSON in this exact structure:
   ]
 }
 Rules:
+- "status" values MUST remain the English enum literals: "green", "yellow", or "grey" — do not translate the status field.
 - green = generally safe for this patient
 - yellow = use with caution, patient should consult pharmacist
 - grey = not advised due to a specific contraindication in this patient's profile
@@ -181,7 +196,7 @@ Rules:
 - Base all reasoning on established pharmacological knowledge.
 
 Patient profile:
-${data.profile}`,
+${data.profile}${langInstruction(data.language)}`,
         },
         {
           role: "user",
@@ -205,6 +220,7 @@ export const checkMedicationSafety = createServerFn({ method: "POST" })
     z.object({
       profile: z.string(),
       medication_name: z.string().min(1),
+      language: languageSchema,
     }),
   )
   .handler(async ({ data }): Promise<SafetyResult> => {
@@ -220,10 +236,13 @@ Output ONLY valid JSON in this exact structure:
   "explanation": "string — detailed explanation referencing the patient's specific conditions and the medication's properties."
 }
 
+- "safety_status" MUST remain one of the English enum literals: "Yes", "Caution", or "No" — do not translate.
+- The "explanation" field should be written in the requested response language.
+
 Base all reasoning on established pharmacological knowledge. Only assess medications that are available over-the-counter (OTC).
 
 Patient profile:
-${data.profile}`,
+${data.profile}${langInstruction(data.language)}`,
         },
         { role: "user", content: `Medication: ${data.medication_name}` },
       ],

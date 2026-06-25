@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { synthesizeSpeech } from "@/lib/tts.functions";
+import { useLanguage } from "@/lib/i18n";
 
 // Minimal types for Web Speech API (not in lib.dom for all TS targets)
 type SpeechRecognitionResult = {
@@ -39,6 +40,7 @@ export function isVoiceSupported() {
 }
 
 export function useVoiceAssistant() {
+  const { language } = useLanguage();
   const recRef = useRef<SpeechRecognitionInstance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   // Cancellation generation — bumped by stopSpeaking/stopListening/cancelAll
@@ -220,7 +222,7 @@ export function useVoiceAssistant() {
       }
       const gen = genRef.current;
       const rec = new Ctor();
-      rec.lang = "en-US";
+      rec.lang = language === "zh" ? "zh-CN" : "en-US";
       rec.interimResults = true;
       rec.continuous = false;
       let finalText = "";
@@ -262,7 +264,7 @@ export function useVoiceAssistant() {
         reject(err as Error);
       }
     });
-  }, []);
+  }, [language]);
 
   return {
     speak,

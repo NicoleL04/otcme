@@ -13,6 +13,7 @@ import {
 } from "@/lib/ai.functions";
 import { addHistory } from "@/lib/history";
 import { NearbyPharmaciesDialog } from "@/components/NearbyPharmaciesDialog";
+import { useT, useLanguage } from "@/lib/i18n";
 import { ArrowLeft, ChevronDown, FileText, Loader2, MapPin, Tag } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,6 +32,7 @@ type StoredRecs = {
 
 function RecommendationsPage() {
   const navigate = useNavigate();
+  const t = useT();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [data, setData] = useState<StoredRecs | null>(null);
   const voice = useVoiceAssistant();
@@ -61,17 +63,17 @@ function RecommendationsPage() {
     if (names.length === 0) return;
     let line: string;
     if (names.length === 1) {
-      line = `Here are your recommendations. The top option is ${names[0]}.`;
+      line = t("voice_rec_one", { first: names[0] });
     } else if (names.length === 2) {
-      line = `Here are your recommendations. The top option is ${names[0]}, followed by ${names[1]}.`;
+      line = t("voice_rec_two", { first: names[0], second: names[1] });
     } else {
-      const rest = names.slice(1, -1).join(", ");
+      const middle = names.slice(1, -1).join(", ");
       const last = names[names.length - 1];
-      line = `Here are your recommendations. The top option is ${names[0]}, followed by ${rest}, and ${last}.`;
+      line = t("voice_rec_many", { first: names[0], middle, last });
     }
     voice.resetCancel?.();
     void voice.speak(line);
-  }, [data, voice]);
+  }, [data, voice, t]);
 
   const voiceRef = useRef(voice);
   voiceRef.current = voice;
@@ -96,10 +98,10 @@ function RecommendationsPage() {
             onClick={() => navigate({ to: "/symptom" })}
             className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-navy"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to symptom check
+            <ArrowLeft className="h-4 w-4" /> {t("rec_back_symptom")}
           </button>
           <p className="text-sm text-muted-foreground">
-            No recommendations found. Start a new symptom check to see options.
+            {t("rec_none")}
           </p>
         </main>
       </div>
@@ -122,8 +124,8 @@ function RecommendationsPage() {
       type: "symptom",
       query: data.symptom,
       summary: top
-        ? `${top.category_name} — ${top.status === "green" ? "Safe" : top.status === "yellow" ? "Consult pharmacist" : "Not recommended"}`
-        : "No recommendation",
+        ? `${top.category_name} — ${top.status === "green" ? t("status_safe") : top.status === "yellow" ? t("status_consult") : t("status_not_recommended")}`
+        : t("rec_none"),
       status: top?.status,
       payload: data.recommendation,
       clarification: data.clarification,
@@ -140,12 +142,12 @@ function RecommendationsPage() {
           onClick={() => navigate({ to: "/symptom" })}
           className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-navy"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to symptom check
+          <ArrowLeft className="h-4 w-4" /> {t("rec_back_symptom")}
         </button>
 
-        <h1 className="text-2xl font-semibold">Recommended categories</h1>
+        <h1 className="text-2xl font-semibold">{t("rec_title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Based on: <span className="font-medium text-navy">{data.symptom}</span>
+          {t("rec_based_on", { symptom: "" })}<span className="font-medium text-navy">{data.symptom}</span>
         </p>
 
         <div className="mt-6 space-y-3">
@@ -153,7 +155,7 @@ function RecommendationsPage() {
             <CategoryCard key={i} category={c} />
           ))}
           <Button onClick={goSummary} variant="outline" className="mt-4 w-full">
-            <FileText className="h-4 w-4" /> Generate Pharmacist Summary Card
+            <FileText className="h-4 w-4" /> {t("rec_generate_summary")}
           </Button>
         </div>
       </main>
@@ -164,23 +166,24 @@ function RecommendationsPage() {
 function CategoryCard({ category }: { category: Recommendation["categories"][number] }) {
   const [open, setOpen] = useState(false);
   const [nearbyOpen, setNearbyOpen] = useState(false);
+  const t = useT();
   const styles = {
     green: {
       border: "border-l-success",
       badge: "bg-success text-success-foreground",
-      label: "Safe",
+      label: t("status_safe"),
       muted: false,
     },
     yellow: {
       border: "border-l-warning",
       badge: "bg-warning text-warning-foreground",
-      label: "Consult Pharmacist",
+      label: t("status_consult"),
       muted: false,
     },
     grey: {
       border: "border-l-neutral",
       badge: "bg-neutral text-neutral-foreground",
-      label: "Not Recommended",
+      label: t("status_not_recommended"),
       muted: true,
     },
   }[category.status];
@@ -215,19 +218,19 @@ function CategoryCard({ category }: { category: Recommendation["categories"][num
         <div className="mt-3 space-y-3 border-t pt-3 text-sm">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Why
+              {t("rec_why")}
             </p>
             <p className="mt-1">{category.reason}</p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Dosage guidance
+              {t("rec_dosage")}
             </p>
             <p className="mt-1">{category.dosage_guidance}</p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Examples
+              {t("rec_examples")}
             </p>
             <p className="mt-1">{category.examples.join(", ")}</p>
           </div>
@@ -243,7 +246,7 @@ function CategoryCard({ category }: { category: Recommendation["categories"][num
                 className="inline-flex items-center gap-1.5 rounded-md border border-teal/30 bg-teal/5 px-3 py-1.5 text-xs font-medium text-teal hover:bg-teal/10"
               >
                 <MapPin className="h-3.5 w-3.5" />
-                Find {category.category_name} nearby
+                {t("rec_find_nearby", { ingredient: category.category_name })}
               </button>
             </div>
           )}
@@ -269,6 +272,7 @@ function ProductExplorer({
   examples: string[];
 }) {
   const fetchProducts = useServerFn(getProductDetails);
+  const t = useT();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ProductList | null>(null);
 
@@ -297,11 +301,11 @@ function ProductExplorer({
       >
         {loading ? (
           <>
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading products…
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("rec_loading_products")}
           </>
         ) : (
           <>
-            <Tag className="h-3.5 w-3.5" /> Learn more — products &amp; prices
+            <Tag className="h-3.5 w-3.5" /> {t("rec_learn_more")}
           </>
         )}
       </button>
@@ -311,7 +315,7 @@ function ProductExplorer({
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Products containing {data.active_ingredient}
+        {t("rec_products_containing", { name: data.active_ingredient })}
       </p>
       <ul className="mt-2 divide-y">
         {data.products.map((p, i) => (
