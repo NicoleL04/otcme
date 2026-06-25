@@ -218,19 +218,19 @@ function CategoryCard({ category }: { category: Recommendation["categories"][num
         <div className="mt-3 space-y-3 border-t pt-3 text-sm">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Why
+              {t("rec_why")}
             </p>
             <p className="mt-1">{category.reason}</p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Dosage guidance
+              {t("rec_dosage")}
             </p>
             <p className="mt-1">{category.dosage_guidance}</p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Examples
+              {t("rec_examples")}
             </p>
             <p className="mt-1">{category.examples.join(", ")}</p>
           </div>
@@ -246,7 +246,7 @@ function CategoryCard({ category }: { category: Recommendation["categories"][num
                 className="inline-flex items-center gap-1.5 rounded-md border border-teal/30 bg-teal/5 px-3 py-1.5 text-xs font-medium text-teal hover:bg-teal/10"
               >
                 <MapPin className="h-3.5 w-3.5" />
-                Find {category.category_name} nearby
+                {t("rec_find_nearby", { ingredient: category.category_name })}
               </button>
             </div>
           )}
