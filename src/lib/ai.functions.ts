@@ -105,9 +105,11 @@ export const getSymptomProbes = createServerFn({ method: "POST" })
     z.object({
       profile: z.string(),
       symptom: z.string().min(1),
+      language: languageSchema,
     }),
   )
   .handler(async ({ data }) => {
+    const isZh = data.language === "zh";
     const content = await callGateway(
       [
         {
@@ -115,12 +117,13 @@ export const getSymptomProbes = createServerFn({ method: "POST" })
           content: `You are a clinical pharmacist assistant gathering quick context before recommending an OTC medication.
 
 Generate 3 to 5 SHORT follow-up questions about the symptom. Rules:
-- Each question is ONE sentence, ideally 6-12 words, plain conversational English.
+- Each question is ONE sentence, ideally 6-12 words${isZh ? ", written in natural Simplified Chinese" : ", plain conversational English"}.
 - DO NOT ask about anything already documented in the patient profile below (allergies, chronic conditions, prescription meds, smoking, alcohol, drug use, age, gender, weight). If a field shows a value other than "None", "Not reported", or empty, treat it as known.
 - ALWAYS include at least one time-sensitive question that the static profile cannot capture (e.g. duration, severity right now, anything already taken in the last 24 hours, recent fever, pregnancy/breastfeeding if relevant).
 - Tailor remaining questions to the specific symptom — do not use a fixed template.
 - Vary phrasing across calls; do not always start the same way.
-- Use snake_case keys that describe the question (e.g. "duration", "severity_now", "taken_last_24h").
+- Use snake_case keys that describe the question in English (e.g. "duration", "severity_now", "taken_last_24h"). Keys MUST be English snake_case regardless of question language.
+- The "q" field is the question text shown to the user — write it in ${isZh ? "Simplified Chinese" : "English"}.
 
 Output ONLY valid JSON:
 { "probes": [ { "key": "snake_case_key", "q": "Short question?" } ] }
