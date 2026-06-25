@@ -13,6 +13,7 @@ import {
 } from "@/lib/ai.functions";
 import { addHistory } from "@/lib/history";
 import { NearbyPharmaciesDialog } from "@/components/NearbyPharmaciesDialog";
+import { useT, useLanguage } from "@/lib/i18n";
 import { ArrowLeft, ChevronDown, FileText, Loader2, MapPin, Tag } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,6 +32,7 @@ type StoredRecs = {
 
 function RecommendationsPage() {
   const navigate = useNavigate();
+  const t = useT();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [data, setData] = useState<StoredRecs | null>(null);
   const voice = useVoiceAssistant();
@@ -61,17 +63,17 @@ function RecommendationsPage() {
     if (names.length === 0) return;
     let line: string;
     if (names.length === 1) {
-      line = `Here are your recommendations. The top option is ${names[0]}.`;
+      line = t("voice_rec_one", { first: names[0] });
     } else if (names.length === 2) {
-      line = `Here are your recommendations. The top option is ${names[0]}, followed by ${names[1]}.`;
+      line = t("voice_rec_two", { first: names[0], second: names[1] });
     } else {
-      const rest = names.slice(1, -1).join(", ");
+      const middle = names.slice(1, -1).join(", ");
       const last = names[names.length - 1];
-      line = `Here are your recommendations. The top option is ${names[0]}, followed by ${rest}, and ${last}.`;
+      line = t("voice_rec_many", { first: names[0], middle, last });
     }
     voice.resetCancel?.();
     void voice.speak(line);
-  }, [data, voice]);
+  }, [data, voice, t]);
 
   const voiceRef = useRef(voice);
   voiceRef.current = voice;
