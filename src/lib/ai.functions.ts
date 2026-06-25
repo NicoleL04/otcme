@@ -159,6 +159,7 @@ export const getRecommendation = createServerFn({ method: "POST" })
       profile: z.string(),
       symptom: z.string(),
       clarification: z.string(),
+      language: languageSchema,
     }),
   )
   .handler(async ({ data }): Promise<Recommendation> => {
@@ -187,6 +188,7 @@ Output ONLY valid JSON in this exact structure:
   ]
 }
 Rules:
+- "status" values MUST remain the English enum literals: "green", "yellow", or "grey" — do not translate the status field.
 - green = generally safe for this patient
 - yellow = use with caution, patient should consult pharmacist
 - grey = not advised due to a specific contraindication in this patient's profile
@@ -194,7 +196,7 @@ Rules:
 - Base all reasoning on established pharmacological knowledge.
 
 Patient profile:
-${data.profile}`,
+${data.profile}${langInstruction(data.language)}`,
         },
         {
           role: "user",
@@ -218,6 +220,7 @@ export const checkMedicationSafety = createServerFn({ method: "POST" })
     z.object({
       profile: z.string(),
       medication_name: z.string().min(1),
+      language: languageSchema,
     }),
   )
   .handler(async ({ data }): Promise<SafetyResult> => {
@@ -233,10 +236,13 @@ Output ONLY valid JSON in this exact structure:
   "explanation": "string — detailed explanation referencing the patient's specific conditions and the medication's properties."
 }
 
+- "safety_status" MUST remain one of the English enum literals: "Yes", "Caution", or "No" — do not translate.
+- The "explanation" field should be written in the requested response language.
+
 Base all reasoning on established pharmacological knowledge. Only assess medications that are available over-the-counter (OTC).
 
 Patient profile:
-${data.profile}`,
+${data.profile}${langInstruction(data.language)}`,
         },
         { role: "user", content: `Medication: ${data.medication_name}` },
       ],
