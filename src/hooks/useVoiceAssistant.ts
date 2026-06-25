@@ -264,7 +264,7 @@ export function useVoiceAssistant() {
         reject(err as Error);
       }
     });
-  }, []);
+  }, [language]);
 
   return {
     speak,
