@@ -218,7 +218,7 @@ function SymptomPage() {
       setStage("loading-q");
       try {
         const qRes = await askClarify({
-          data: { profile: profileSummary(updatedProfile), symptom: symptomText },
+          data: { profile: profileSummary(updatedProfile), symptom: symptomText, language },
         });
         setQuestions(qRes.questions);
       } catch {
@@ -232,6 +232,7 @@ function SymptomPage() {
           profile: profileSummary(updatedProfile),
           symptom: symptomText,
           clarification: clarificationText || "(no further detail)",
+          language,
         },
       });
       const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
@@ -263,7 +264,7 @@ function SymptomPage() {
         const msg = e instanceof Error ? e.message : "Voice flow failed";
         toast.error(msg);
         try {
-          await say("Sorry, something went wrong. You can continue by typing.");
+          await say(t("voice_error"));
         } catch {
           // ignore
         }
