@@ -1,35 +1,41 @@
-## Why the audio is broken
 
-Server logs show every TTS call returns:
+## Goal
 
-```
-ElevenLabs TTS failed: 401 {"status":"invalid_api_key","message":"Invalid API key"}
-```
+1. Use the **same ElevenLabs voice** for English and Chinese, and make it actually sound multilingual.
+2. Stop the **Chinese mic** from cutting off mid-sentence.
+3. Stop the **Chinese TTS audio** from being clipped / stopping early.
 
-`ELEVENLABS_API_KEY` is present (synced from the ElevenLabs connector) but ElevenLabs is rejecting it. That's why nothing ever plays — the `speak()` promise resolves with no audio after the fetch throws.
+## Why it's happening
 
-The client side (`useVoiceAssistant`) is fine; the request itself never returns valid MP3 bytes.
+- `src/lib/tts.functions.ts` uses `model_id: "eleven_turbo_v2_5"`. Turbo handles Chinese, but quality/consistency on a single English-trained voice is shaky — switching to the multilingual model gives the same voice ID a consistent multilingual delivery and avoids the random truncations we're seeing on long ZH strings.
+- `src/hooks/useVoiceAssistant.ts` `listen()` uses `continuous: false`. With `zh-CN`, Web Speech fires `onend` on the first natural pause, so a sentence with a comma-pause ends the turn. We never accumulate across that — whatever was captured so far is returned, often empty/partial.
+- The same hook's `speak()` polls every 100 ms and calls `finish()` whenever `audio.paused` is true. During MP3 buffering on slower ZH responses the audio element briefly reports `paused`, which trips the watchdog and tears the audio down → "TTS cuts off". The paused-check is redundant with the cancel flag.
 
-## Can it speak Chinese?
+## Changes
 
-Yes. The current model `eleven_turbo_v2_5` is multilingual and handles Mandarin. The fixed voice `JAATlCsz6GCH2vUjFcLg` will pronounce Chinese text once the key works. We can optionally pass the active UI language to the server fn so the model has an explicit language hint (slightly better pronunciation on short strings).
+### 1. `src/lib/tts.functions.ts` — same voice, multilingual model
+- Keep `VOICE_ID` unchanged (single voice for both languages).
+- Change `model_id` to `"eleven_multilingual_v2"` (best ZH+EN consistency on a single voice; `language_code` already forwarded).
 
-## Plan
+### 2. `src/hooks/useVoiceAssistant.ts` — robust ZH listening
+Rework `listen()` so a pause in Chinese speech doesn't end the turn:
+- Set `continuous = true`.
+- Keep an internal `finalText` buffer and a **silence timer** (~1500 ms after the last result event). Only when the silence timer fires do we `rec.stop()` and resolve with the accumulated final text.
+- Reset the silence timer on every `onresult` (interim or final).
+- Add a hard cap (~15 s) so a stuck mic still resolves.
+- Keep the existing cancel/gen guards; `stopListening` clears the timer and aborts.
 
-1. **Fix the credential** — the connector-synced key is invalid. Two options:
-   - Reconnect the ElevenLabs connector with a working API key (recommended, keeps it managed).
-   - Or replace it with a manual `ELEVENLABS_API_KEY` secret.
-   I'll trigger the reconnect flow once you confirm.
+### 3. `src/hooks/useVoiceAssistant.ts` — don't clip TTS
+In `speak()`:
+- Remove the `audio.paused` branch from the 100 ms watchdog; the watchdog should only fire on `cancelledRef`/`gen` change.
+- Keep `onended`/`onerror` as the natural completion paths.
+- (No change to ordering of events, no API change.)
 
-2. **Verify** by hitting `/api/public/tts-test` again — expect HTTP 200 with `audio/mpeg` instead of 500.
+## Out of scope
+- No UI changes, no new dependencies, no provider switch.
+- Not touching the recommendation/clarify flows.
 
-3. **Improve Chinese support** in `src/lib/tts.functions.ts`:
-   - Accept an optional `language: 'en' | 'zh'` input.
-   - Keep `eleven_turbo_v2_5` (multilingual) and pass `language_code: 'zh'` when Chinese.
-   - In `useVoiceAssistant.speak`, forward the current `language` from `useLanguage()`.
-
-4. No UI/layout changes; assistant button behavior stays the same.
-
-## Question for you
-
-Do you want me to (a) reconnect the ElevenLabs connector, or (b) set a manual `ELEVENLABS_API_KEY` you'll paste?
+## Verification
+- Run preview, switch to 中文, start voice flow, speak a longer sentence with a mid-sentence pause → mic should keep listening until ~1.5 s of silence; transcript captured in full.
+- Long ZH assistant reply (e.g. recommendation summary) should play to completion without truncation.
+- EN flow regression check: greeting + probes still work; voice sounds the same as before (same voice ID).

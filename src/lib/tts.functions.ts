@@ -24,8 +24,7 @@ export const synthesizeSpeech = createServerFn({ method: "POST" })
         },
         body: JSON.stringify({
           text: data.text,
-          model_id: "eleven_turbo_v2_5",
-          language_code: data.language === "zh" ? "zh" : "en",
+          model_id: "eleven_multilingual_v2",
         }),
       },
     );
