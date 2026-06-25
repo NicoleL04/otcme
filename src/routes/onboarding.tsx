@@ -104,11 +104,14 @@ function Onboarding() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
-        <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 py-3">
-          <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground">
-            <Pill className="h-4 w-4" />
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-2 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-primary-foreground">
+              <Pill className="h-4 w-4" />
+            </div>
+            <span className="text-lg font-semibold text-navy">OTC&amp;Me</span>
           </div>
-          <span className="text-lg font-semibold text-navy">OTC&amp;Me</span>
+          <LanguageSwitcher />
         </div>
       </header>
       <main className="mx-auto max-w-2xl px-4 py-8">
@@ -122,14 +125,14 @@ function Onboarding() {
             />
           ))}
         </div>
-        <p className="text-sm text-muted-foreground">Step {step} of 4</p>
+        <p className="text-sm text-muted-foreground">{t("onb_step_of", { n: step })}</p>
 
         <div className="mt-4 rounded-2xl border bg-card p-6 shadow-sm">
           {step === 1 && (
             <div>
-              <h1 className="text-2xl font-semibold">Who are you tracking for?</h1>
+              <h1 className="text-2xl font-semibold">{t("onb_who_title")}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                We'll personalize OTC guidance for this person.
+                {t("onb_who_desc")}
               </p>
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 <button
@@ -139,11 +142,9 @@ function Onboarding() {
                     isSelf === true ? "border-primary bg-primary/5" : "hover:border-primary/50"
                   } ${selfTaken ? "cursor-not-allowed opacity-50 hover:border-input" : ""}`}
                 >
-                  <p className="font-semibold">Myself</p>
+                  <p className="font-semibold">{t("onb_self")}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {selfTaken
-                      ? "You already have a personal profile. Edit it in Settings."
-                      : "Personal profile for your own use."}
+                    {selfTaken ? t("onb_self_taken") : t("onb_self_desc")}
                   </p>
                 </button>
                 <button
@@ -152,18 +153,18 @@ function Onboarding() {
                     isSelf === false ? "border-primary bg-primary/5" : "hover:border-primary/50"
                   }`}
                 >
-                  <p className="font-semibold">A loved one</p>
+                  <p className="font-semibold">{t("onb_loved")}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Track for a parent, child, or partner.
+                    {t("onb_loved_desc")}
                   </p>
                 </button>
               </div>
               {isSelf === false && (
                 <div className="mt-4">
-                  <Label htmlFor="loved-name">Their name</Label>
+                  <Label htmlFor="loved-name">{t("onb_their_name")}</Label>
                   <Input
                     id="loved-name"
-                    placeholder="e.g. Mom, Jake"
+                    placeholder={t("onb_name_placeholder")}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="mt-1"
@@ -175,13 +176,13 @@ function Onboarding() {
 
           {step === 2 && (
             <div>
-              <h1 className="text-2xl font-semibold">Basic info</h1>
+              <h1 className="text-2xl font-semibold">{t("onb_basic_title")}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                Helps tailor dosing guidance.
+                {t("onb_basic_desc")}
               </p>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <div>
-                  <Label htmlFor="age">Age</Label>
+                  <Label htmlFor="age">{t("onb_age")}</Label>
                   <Input
                     id="age"
                     type="number"
@@ -192,33 +193,33 @@ function Onboarding() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="gender">Gender</Label>
+                  <Label htmlFor="gender">{t("onb_gender")}</Label>
                   <select
                     id="gender"
                     value={gender}
                     onChange={(e) => setGender(e.target.value)}
                     className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    {GENDERS.map((g) => (
-                      <option key={g}>{g}</option>
+                    {GENDER_KEYS.map((g) => (
+                      <option key={g.val} value={g.val}>{t(g.key)}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="weight">Weight</Label>
+                  <Label htmlFor="weight">{t("onb_weight")}</Label>
                   <Input
                     id="weight"
-                    placeholder="e.g. 150 lbs"
+                    placeholder={t("onb_weight_ph")}
                     value={weight}
                     onChange={(e) => setWeight(e.target.value)}
                     className="mt-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="height">Height</Label>
+                  <Label htmlFor="height">{t("onb_height")}</Label>
                   <Input
                     id="height"
-                    placeholder={`e.g. 5'7"`}
+                    placeholder={t("onb_height_ph")}
                     value={height}
                     onChange={(e) => setHeight(e.target.value)}
                     className="mt-1"
