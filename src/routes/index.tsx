@@ -15,7 +15,11 @@ export const Route = createFileRoute("/")({
         content:
           "Pharmacist-built guidance for safer over-the-counter medicine choices based on your personal health profile.",
       },
+      { property: "og:title", content: "OTC&Me — Your AI OTC aisle assistant" },
+      { property: "og:description", content: "Pharmacist-built guidance for safer OTC choices, tailored to your health profile." },
+      { property: "og:url", content: "https://me-otc-trade.lovable.app/" },
     ],
+    links: [{ rel: "canonical", href: "https://me-otc-trade.lovable.app/" }],
   }),
   component: Home,
 });
