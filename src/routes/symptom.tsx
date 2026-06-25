@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useVoiceAssistant, isVoiceSupported } from "@/hooks/useVoiceAssistant";
+import { useT, useLanguage } from "@/lib/i18n";
 
 
 export const Route = createFileRoute("/symptom")({
@@ -57,6 +58,8 @@ type Probe = {
 
 function SymptomPage() {
   const navigate = useNavigate();
+  const t = useT();
+  const { language } = useLanguage();
   const askClarify = useServerFn(getClarifyingQuestions);
   const askRec = useServerFn(getRecommendation);
   const askProbes = useServerFn(getSymptomProbes);
@@ -104,14 +107,14 @@ function SymptomPage() {
 
   // Minimal fallback probes if the AI probe call fails.
   const fallbackProbes = (): Probe[] => [
-    { key: "duration", q: "How long has this been going on?" },
-    { key: "taken_last_24h", q: "Taken anything for it in the last 24 hours?" },
+    { key: "duration", q: language === "zh" ? "这种情况持续多久了?" : "How long has this been going on?" },
+    { key: "taken_last_24h", q: language === "zh" ? "过去24小时内吃过什么药吗?" : "Taken anything for it in the last 24 hours?" },
   ];
 
   const fetchProbes = async (p: Profile, symptomText: string): Promise<Probe[]> => {
     try {
       const res = await askProbes({
-        data: { profile: profileSummary(p), symptom: symptomText },
+        data: { profile: profileSummary(p), symptom: symptomText, language },
       });
       return res.probes.map((pr) => ({ key: pr.key, q: pr.q }));
     } catch {
