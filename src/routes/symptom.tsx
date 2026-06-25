@@ -170,19 +170,17 @@ function SymptomPage() {
 
     try {
       // 1. Greeting + main symptom
-      const symptomText = await askOneShown("Hello, how can I help you today?", {
+      const symptomText = await askOneShown(t("voice_greeting"), {
         retries: 2,
-        rephrase: "No worries — in your own words, what's bothering you today?",
+        rephrase: t("voice_rephrase_main"),
       });
       if (!symptomText) {
-        await say("I'm having trouble hearing you. Let's try typing instead.");
+        await say(t("voice_cant_hear"));
         setVoiceActive(false);
         return;
       }
       setSymptom(symptomText);
-      await say(
-        "Thanks for sharing. I'd like to ask a few quick questions so I can point you to the safest option.",
-      );
+      await say(t("voice_thanks_sharing"));
 
 
       // 2. Dynamic, profile-aware probes — short, varied, skip what's known.
@@ -198,9 +196,7 @@ function SymptomPage() {
 
 
       // 5. Confirm before searching
-      await say(
-        "Great, I have what I need. Give me a moment to find the safest options for you.",
-      );
+      await say(t("voice_have_what_need"));
 
 
 
