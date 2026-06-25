@@ -191,7 +191,7 @@ export function useVoiceAssistant() {
       audio.onerror = finish;
 
       interval = window.setInterval(() => {
-        if (gen !== genRef.current || cancelledRef.current || audio.paused) {
+        if (gen !== genRef.current || cancelledRef.current) {
           try {
             audio.pause();
           } catch {
@@ -226,8 +226,35 @@ export function useVoiceAssistant() {
       const rec = new Ctor();
       rec.lang = language === "zh" ? "zh-CN" : "en-US";
       rec.interimResults = true;
-      rec.continuous = false;
+      rec.continuous = true;
       let finalText = "";
+      let silenceTimer: number | null = null;
+      let hardCap: number | null = null;
+      let stopped = false;
+
+      const clearTimers = () => {
+        if (silenceTimer !== null) {
+          window.clearTimeout(silenceTimer);
+          silenceTimer = null;
+        }
+        if (hardCap !== null) {
+          window.clearTimeout(hardCap);
+          hardCap = null;
+        }
+      };
+
+      const armSilence = () => {
+        if (silenceTimer !== null) window.clearTimeout(silenceTimer);
+        silenceTimer = window.setTimeout(() => {
+          if (stopped) return;
+          stopped = true;
+          try {
+            rec.stop();
+          } catch {
+            // ignore
+          }
+        }, 1500);
+      };
 
       rec.onresult = (e) => {
         let interimText = "";
@@ -237,17 +264,25 @@ export function useVoiceAssistant() {
           else interimText += r[0].transcript;
         }
         setInterim(interimText);
+        armSilence();
       };
       rec.onerror = (e) => {
+        clearTimers();
         setListening(false);
         setInterim("");
         if (gen !== genRef.current || cancelledRef.current) {
           resolve("");
           return;
         }
+        // no-speech is common when user pauses too long — resolve with what we have
+        if (e.error === "no-speech" || e.error === "aborted") {
+          resolve(finalText.trim());
+          return;
+        }
         reject(new Error(e.error || "Speech recognition error"));
       };
       rec.onend = () => {
+        clearTimers();
         setListening(false);
         setInterim("");
         if (gen !== genRef.current || cancelledRef.current) {
@@ -261,7 +296,20 @@ export function useVoiceAssistant() {
       try {
         rec.start();
         setListening(true);
+        // Arm an initial silence window so we don't wait forever for first speech.
+        armSilence();
+        // Hard cap on a single listen turn.
+        hardCap = window.setTimeout(() => {
+          if (stopped) return;
+          stopped = true;
+          try {
+            rec.stop();
+          } catch {
+            // ignore
+          }
+        }, 15000);
       } catch (err) {
+        clearTimers();
         setListening(false);
         reject(err as Error);
       }
