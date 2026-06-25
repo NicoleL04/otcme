@@ -98,10 +98,10 @@ function RecommendationsPage() {
             onClick={() => navigate({ to: "/symptom" })}
             className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-navy"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to symptom check
+            <ArrowLeft className="h-4 w-4" /> {t("rec_back_symptom")}
           </button>
           <p className="text-sm text-muted-foreground">
-            No recommendations found. Start a new symptom check to see options.
+            {t("rec_none")}
           </p>
         </main>
       </div>
@@ -124,8 +124,8 @@ function RecommendationsPage() {
       type: "symptom",
       query: data.symptom,
       summary: top
-        ? `${top.category_name} — ${top.status === "green" ? "Safe" : top.status === "yellow" ? "Consult pharmacist" : "Not recommended"}`
-        : "No recommendation",
+        ? `${top.category_name} — ${top.status === "green" ? t("status_safe") : top.status === "yellow" ? t("status_consult") : t("status_not_recommended")}`
+        : t("rec_none"),
       status: top?.status,
       payload: data.recommendation,
       clarification: data.clarification,
@@ -142,12 +142,12 @@ function RecommendationsPage() {
           onClick={() => navigate({ to: "/symptom" })}
           className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-navy"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to symptom check
+          <ArrowLeft className="h-4 w-4" /> {t("rec_back_symptom")}
         </button>
 
-        <h1 className="text-2xl font-semibold">Recommended categories</h1>
+        <h1 className="text-2xl font-semibold">{t("rec_title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Based on: <span className="font-medium text-navy">{data.symptom}</span>
+          {t("rec_based_on", { symptom: "" })}<span className="font-medium text-navy">{data.symptom}</span>
         </p>
 
         <div className="mt-6 space-y-3">
@@ -155,7 +155,7 @@ function RecommendationsPage() {
             <CategoryCard key={i} category={c} />
           ))}
           <Button onClick={goSummary} variant="outline" className="mt-4 w-full">
-            <FileText className="h-4 w-4" /> Generate Pharmacist Summary Card
+            <FileText className="h-4 w-4" /> {t("rec_generate_summary")}
           </Button>
         </div>
       </main>
