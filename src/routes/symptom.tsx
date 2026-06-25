@@ -284,12 +284,10 @@ function SymptomPage() {
     if (!symptom.trim()) return;
     setProbeAnswers({});
     setPatches({ profile: {}, lifestyle: {} });
+    const thinkingMsg = t("sym_thanks_thinking");
     setChat([
       { role: "user", text: symptom },
-      {
-        role: "assistant",
-        text: "Thanks. Thinking of a few quick questions…",
-      },
+      { role: "assistant", text: thinkingMsg },
     ]);
     setAnswers("");
     setTextInput("");
@@ -297,11 +295,8 @@ function SymptomPage() {
     const probes = await fetchProbes(profile, symptom);
     setProbeQueue(probes);
     setChat((c) => [
-      ...c.filter((m) => m.text !== "Thanks. Thinking of a few quick questions…"),
-      {
-        role: "assistant",
-        text: "Thanks for sharing. A few quick questions so I can point you to the safest option.",
-      },
+      ...c.filter((m) => m.text !== thinkingMsg),
+      { role: "assistant", text: t("sym_thanks_short") },
       { role: "assistant", text: probes[0].q },
     ]);
     setStage("clarify");
@@ -334,10 +329,7 @@ function SymptomPage() {
       setProfile(updatedProfile);
       setChat((c) => [
         ...c,
-        {
-          role: "assistant",
-          text: "Thanks — I've saved that to your profile so you don't have to repeat it next time.",
-        },
+        { role: "assistant", text: t("sym_saved_to_profile") },
       ]);
     }
 
@@ -351,7 +343,7 @@ function SymptomPage() {
     setStage("loading-q");
     try {
       const qRes = await askClarify({
-        data: { profile: profileSummary(updatedProfile), symptom },
+        data: { profile: profileSummary(updatedProfile), symptom, language },
       });
       setQuestions(qRes.questions);
     } catch {
@@ -365,6 +357,7 @@ function SymptomPage() {
           profile: profileSummary(updatedProfile),
           symptom,
           clarification: clarificationText || "(no further detail)",
+          language,
         },
       });
       const rank: Record<string, number> = { green: 0, yellow: 1, grey: 2 };
@@ -422,10 +415,7 @@ function SymptomPage() {
     } else {
       setChat((c) => [
         ...c,
-        {
-          role: "assistant",
-          text: "Great, I have what I need. Finding the safest options for you now.",
-        },
+        { role: "assistant", text: t("sym_have_what_need") },
       ]);
       void finalizeTextFlow(newAnswers, newPatches);
     }
