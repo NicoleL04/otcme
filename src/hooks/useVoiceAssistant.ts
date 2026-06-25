@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { synthesizeSpeech } from "@/lib/tts.functions";
+import { useLanguage } from "@/lib/i18n";
 
 // Minimal types for Web Speech API (not in lib.dom for all TS targets)
 type SpeechRecognitionResult = {
