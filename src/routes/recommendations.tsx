@@ -166,23 +166,24 @@ function RecommendationsPage() {
 function CategoryCard({ category }: { category: Recommendation["categories"][number] }) {
   const [open, setOpen] = useState(false);
   const [nearbyOpen, setNearbyOpen] = useState(false);
+  const t = useT();
   const styles = {
     green: {
       border: "border-l-success",
       badge: "bg-success text-success-foreground",
-      label: "Safe",
+      label: t("status_safe"),
       muted: false,
     },
     yellow: {
       border: "border-l-warning",
       badge: "bg-warning text-warning-foreground",
-      label: "Consult Pharmacist",
+      label: t("status_consult"),
       muted: false,
     },
     grey: {
       border: "border-l-neutral",
       badge: "bg-neutral text-neutral-foreground",
-      label: "Not Recommended",
+      label: t("status_not_recommended"),
       muted: true,
     },
   }[category.status];
