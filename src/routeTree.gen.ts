@@ -18,6 +18,7 @@ import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HistoryIdRouteImport } from './routes/history.$id'
+import { Route as ApiTtsTestRouteImport } from './routes/api/tts-test'
 
 const WishlistRoute = WishlistRouteImport.update({
   id: '/wishlist',
@@ -64,6 +65,11 @@ const HistoryIdRoute = HistoryIdRouteImport.update({
   path: '/history/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTtsTestRoute = ApiTtsTestRouteImport.update({
+  id: '/api/tts-test',
+  path: '/api/tts-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/summary': typeof SummaryRoute
   '/symptom': typeof SymptomRoute
   '/wishlist': typeof WishlistRoute
+  '/api/tts-test': typeof ApiTtsTestRoute
   '/history/$id': typeof HistoryIdRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/summary': typeof SummaryRoute
   '/symptom': typeof SymptomRoute
   '/wishlist': typeof WishlistRoute
+  '/api/tts-test': typeof ApiTtsTestRoute
   '/history/$id': typeof HistoryIdRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/summary': typeof SummaryRoute
   '/symptom': typeof SymptomRoute
   '/wishlist': typeof WishlistRoute
+  '/api/tts-test': typeof ApiTtsTestRoute
   '/history/$id': typeof HistoryIdRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/summary'
     | '/symptom'
     | '/wishlist'
+    | '/api/tts-test'
     | '/history/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/summary'
     | '/symptom'
     | '/wishlist'
+    | '/api/tts-test'
     | '/history/$id'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/summary'
     | '/symptom'
     | '/wishlist'
+    | '/api/tts-test'
     | '/history/$id'
   fileRoutesById: FileRoutesById
 }
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   SummaryRoute: typeof SummaryRoute
   SymptomRoute: typeof SymptomRoute
   WishlistRoute: typeof WishlistRoute
+  ApiTtsTestRoute: typeof ApiTtsTestRoute
   HistoryIdRoute: typeof HistoryIdRoute
 }
 
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoryIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tts-test': {
+      id: '/api/tts-test'
+      path: '/api/tts-test'
+      fullPath: '/api/tts-test'
+      preLoaderRoute: typeof ApiTtsTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -224,18 +244,9 @@ const rootRouteChildren: RootRouteChildren = {
   SummaryRoute: SummaryRoute,
   SymptomRoute: SymptomRoute,
   WishlistRoute: WishlistRoute,
+  ApiTtsTestRoute: ApiTtsTestRoute,
   HistoryIdRoute: HistoryIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
