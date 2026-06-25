@@ -134,13 +134,14 @@ export function useVoiceAssistant() {
 
     let audioBase64: string;
     try {
-      const res = await synthesizeSpeech({ data: { text } });
+      const res = await synthesizeSpeech({ data: { text, language } });
       audioBase64 = res.audioBase64;
     } catch (err) {
       console.error("TTS request failed", err);
       setSpeaking(false);
       return;
     }
+
 
     if (gen !== genRef.current || cancelledRef.current) {
       setSpeaking(false);
