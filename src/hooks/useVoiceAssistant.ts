@@ -40,6 +40,7 @@ export function isVoiceSupported() {
 }
 
 export function useVoiceAssistant() {
+  const { language } = useLanguage();
   const recRef = useRef<SpeechRecognitionInstance | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   // Cancellation generation — bumped by stopSpeaking/stopListening/cancelAll
