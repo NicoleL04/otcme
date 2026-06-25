@@ -432,12 +432,12 @@ function SymptomPage() {
           onClick={() => navigate({ to: "/" })}
           className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-navy"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to dashboard
+          <ArrowLeft className="h-4 w-4" /> {t("back_to_dashboard")}
         </button>
 
-        <h1 className="text-2xl font-semibold">What's the symptom?</h1>
+        <h1 className="text-2xl font-semibold">{t("sym_title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Profile: {profile.profile_name}
+          {t("sym_profile", { name: profile.profile_name })}
         </p>
 
         <div className="mt-6 rounded-2xl border bg-card p-6 shadow-sm">
@@ -446,10 +446,10 @@ function SymptomPage() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-navy">
-                    Talk to OTC&amp;Me instead
+                    {t("sym_voice_title")}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Hands-free voice conversation — one question at a time, no typing needed.
+                    {t("sym_voice_desc")}
                   </p>
                 </div>
                 {voiceActive ? (
@@ -459,7 +459,7 @@ function SymptomPage() {
                     size="sm"
                     onClick={stopVoice}
                   >
-                    <Square className="h-4 w-4" /> Stop
+                    <Square className="h-4 w-4" /> {t("sym_voice_stop")}
                   </Button>
                 ) : (
                   <Button
@@ -468,7 +468,7 @@ function SymptomPage() {
                     onClick={runVoiceFlow}
                     disabled={voiceActive}
                   >
-                    <Mic className="h-4 w-4" /> Start voice
+                    <Mic className="h-4 w-4" /> {t("sym_voice_start")}
                   </Button>
                 )}
               </div>
@@ -484,10 +484,10 @@ function SymptomPage() {
 
           {stage === "input" && !voiceActive && (
             <>
-              <label className="text-sm font-medium">Describe your symptom or illness</label>
+              <label className="text-sm font-medium">{t("sym_describe")}</label>
               <Textarea
                 autoFocus
-                placeholder="e.g. runny nose and sore throat for 2 days"
+                placeholder={t("sym_describe_ph")}
                 value={symptom}
                 onChange={(e) => setSymptom(e.target.value)}
                 className="mt-2 min-h-[100px]"
@@ -495,7 +495,7 @@ function SymptomPage() {
               />
               <div className="mt-4 flex justify-end">
                 <Button onClick={submitSymptom} disabled={!symptom.trim() || voiceActive}>
-                  Continue <Send className="h-4 w-4" />
+                  {t("continue")} <Send className="h-4 w-4" />
                 </Button>
               </div>
             </>
@@ -508,7 +508,7 @@ function SymptomPage() {
             <div className="flex flex-col overflow-hidden rounded-xl border bg-background">
               <div className="max-h-[55vh] min-h-[280px] flex-1 space-y-3 overflow-y-auto p-4">
                 {stage === "loading-q" && chat.length === 0 && (
-                  <LoaderCard label="Thinking of clarifying questions…" />
+                  <LoaderCard label={t("sym_loading_questions")} />
                 )}
                 {chat.map((m, i) =>
                   m.role === "user" ? (
@@ -523,16 +523,16 @@ function SymptomPage() {
                       key={i}
                       className="max-w-[85%] rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm"
                     >
-                      <p className="mb-1 text-xs font-semibold text-primary">OTC&amp;Me Assistant</p>
+                      <p className="mb-1 text-xs font-semibold text-primary">{t("sym_assistant")}</p>
                       <p className="whitespace-pre-wrap">{m.text}</p>
                     </div>
                   ),
                 )}
                 {stage === "loading-q" && chat.length > 0 && (
-                  <LoaderCard label="Reviewing your answers…" />
+                  <LoaderCard label={t("sym_loading_reviewing")} />
                 )}
                 {stage === "loading-r" && (
-                  <LoaderCard label="Finding the safest options for you…" />
+                  <LoaderCard label={t("sym_loading_finding")} />
                 )}
                 <div ref={messagesEndRef} />
               </div>
@@ -541,7 +541,7 @@ function SymptomPage() {
                 <div className="border-t bg-card p-3">
                   <Textarea
                     autoFocus
-                    placeholder="Type your answer…"
+                    placeholder={t("sym_type_answer")}
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -554,10 +554,10 @@ function SymptomPage() {
                   />
                   <div className="mt-2 flex items-center justify-between">
                     <p className="text-xs text-muted-foreground">
-                      Question {Object.keys(probeAnswers).length + 1}
+                      {t("sym_question_n", { n: Object.keys(probeAnswers).length + 1 })}
                     </p>
                     <Button onClick={submitTextAnswer} disabled={!textInput.trim()}>
-                      Send <Send className="h-4 w-4" />
+                      {t("send")} <Send className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
