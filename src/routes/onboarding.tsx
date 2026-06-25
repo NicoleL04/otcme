@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { addProfile, hasSelfProfile, type Profile } from "@/lib/profile";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useT } from "@/lib/i18n";
 import { Pill, ArrowRight, ArrowLeft, Check } from "lucide-react";
 
 export const Route = createFileRoute("/onboarding")({
@@ -15,21 +17,27 @@ export const Route = createFileRoute("/onboarding")({
   component: Onboarding,
 });
 
-const CONDITIONS = [
-  "Hypertension",
-  "Type 2 Diabetes",
-  "Asthma",
-  "Heart Disease",
-  "Kidney Disease",
-  "Liver Disease",
-  "Thyroid Disorder",
-  "GERD/Acid Reflux",
-];
+const CONDITION_KEYS = [
+  { val: "Hypertension", key: "cond_hypertension" },
+  { val: "Type 2 Diabetes", key: "cond_diabetes2" },
+  { val: "Asthma", key: "cond_asthma" },
+  { val: "Heart Disease", key: "cond_heart" },
+  { val: "Kidney Disease", key: "cond_kidney" },
+  { val: "Liver Disease", key: "cond_liver" },
+  { val: "Thyroid Disorder", key: "cond_thyroid" },
+  { val: "GERD/Acid Reflux", key: "cond_gerd" },
+] as const;
 
-const GENDERS = ["Male", "Female", "Other", "Prefer not to say"];
+const GENDER_KEYS = [
+  { val: "Male", key: "g_male" },
+  { val: "Female", key: "g_female" },
+  { val: "Other", key: "g_other" },
+  { val: "Prefer not to say", key: "g_prefer_not" },
+] as const;
 
 function Onboarding() {
   const navigate = useNavigate();
+  const t = useT();
   const [step, setStep] = useState(1);
   const [selfTaken, setSelfTaken] = useState(false);
   const [isSelf, setIsSelf] = useState<boolean | null>(null);
