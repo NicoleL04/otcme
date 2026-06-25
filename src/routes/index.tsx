@@ -57,7 +57,7 @@ function Home() {
             </div>
             <div className="flex-1">
               <p className="text-sm text-muted-foreground">{t("home_active_profile")}</p>
-              <h1 className="text-2xl font-semibold">{profile.profile_name}</h1>
+              <h1 className="text-2xl font-semibold">Health Dashboard: {profile.profile_name}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 {t("onb_age")} {profile.age} • {profile.gender}
                 {profile.height && profile.weight ? ` • ${profile.height} / ${profile.weight}` : ""}
