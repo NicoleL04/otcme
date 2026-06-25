@@ -19,7 +19,15 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/recommendations")({
   head: () => ({
-    meta: [{ title: "Recommended categories — OTC&Me" }],
+    meta: [
+      { title: "Recommended categories — OTC&Me" },
+      { name: "description", content: "Personalized over-the-counter medication categories matched to your symptoms and health profile, with safety reasoning." },
+      { property: "og:title", content: "Recommended categories — OTC&Me" },
+      { property: "og:description", content: "Personalized OTC category recommendations with safety reasoning." },
+      { property: "og:url", content: "https://me-otc-trade.lovable.app/recommendations" },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: "https://me-otc-trade.lovable.app/recommendations" }],
   }),
   component: RecommendationsPage,
 });

@@ -8,7 +8,11 @@ import { ArrowLeft, Camera, Pill } from "lucide-react";
 
 export const Route = createFileRoute("/summary")({
   head: () => ({
-    meta: [{ title: "Pharmacist summary — OTC&Me" }],
+    meta: [
+      { title: "Pharmacist summary — OTC&Me" },
+      { name: "description", content: "Shareable pharmacist-ready summary of your OTC consultation, including profile, query, and safety reasoning." },
+      { name: "robots", content: "noindex" },
+    ],
   }),
   component: SummaryPage,
 });
@@ -90,16 +94,15 @@ function SummaryPage() {
               <Pill className="h-5 w-5" />
             </div>
             <div>
+              <h1 className="text-lg font-semibold text-navy">Pharmacist Summary</h1>
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                OTC&amp;Me Pharmacist Summary
-              </p>
-              <h1 className="text-lg font-semibold text-navy">
+                OTC&amp;Me ·{" "}
                 {new Date().toLocaleDateString(undefined, {
                   year: "numeric",
                   month: "long",
                   day: "numeric",
                 })}
-              </h1>
+              </p>
             </div>
           </header>
 

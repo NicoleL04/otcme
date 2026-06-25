@@ -33,7 +33,28 @@ import { useT, useLanguage } from "@/lib/i18n";
 
 export const Route = createFileRoute("/symptom")({
   head: () => ({
-    meta: [{ title: "Symptom check — OTC&Me" }],
+    meta: [
+      { title: "Symptom check — OTC&Me" },
+      { name: "description", content: "Describe your symptoms by voice or text and get pharmacist-built, profile-aware OTC category recommendations." },
+      { property: "og:title", content: "Symptom check — OTC&Me" },
+      { property: "og:description", content: "AI symptom check that suggests safer OTC categories for your health profile." },
+      { property: "og:url", content: "https://me-otc-trade.lovable.app/symptom" },
+    ],
+    links: [{ rel: "canonical", href: "https://me-otc-trade.lovable.app/symptom" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Service",
+          name: "AI Symptom Checker",
+          serviceType: "OTC symptom triage",
+          provider: { "@type": "Organization", name: "OTC&Me" },
+          description: "Pharmacist-built AI that recommends safer OTC product categories based on your symptoms and health profile.",
+          url: "https://me-otc-trade.lovable.app/symptom",
+        }),
+      },
+    ],
   }),
   component: SymptomPage,
 });

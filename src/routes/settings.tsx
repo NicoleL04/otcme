@@ -18,7 +18,17 @@ import { ArrowLeft, Check, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "Settings — OTC&Me" }] }),
+  head: () => ({
+    meta: [
+      { title: "Settings — OTC&Me" },
+      { name: "description", content: "Manage your health profiles, conditions, prescriptions, and language preferences for OTC&Me." },
+      { property: "og:title", content: "Settings — OTC&Me" },
+      { property: "og:description", content: "Manage profiles and preferences for OTC&Me." },
+      { property: "og:url", content: "https://me-otc-trade.lovable.app/settings" },
+      { name: "robots", content: "noindex" },
+    ],
+    links: [{ rel: "canonical", href: "https://me-otc-trade.lovable.app/settings" }],
+  }),
   component: SettingsPage,
 });
 

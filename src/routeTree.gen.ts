@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WishlistRouteImport } from './routes/wishlist'
 import { Route as SymptomRouteImport } from './routes/symptom'
 import { Route as SummaryRouteImport } from './routes/summary'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SafetyRouteImport } from './routes/safety'
 import { Route as RecommendationsRouteImport } from './routes/recommendations'
@@ -33,6 +34,11 @@ const SymptomRoute = SymptomRouteImport.update({
 const SummaryRoute = SummaryRouteImport.update({
   id: '/summary',
   path: '/summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/recommendations': typeof RecommendationsRoute
   '/safety': typeof SafetyRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/summary': typeof SummaryRoute
   '/symptom': typeof SymptomRoute
   '/wishlist': typeof WishlistRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/recommendations': typeof RecommendationsRoute
   '/safety': typeof SafetyRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/summary': typeof SummaryRoute
   '/symptom': typeof SymptomRoute
   '/wishlist': typeof WishlistRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/recommendations': typeof RecommendationsRoute
   '/safety': typeof SafetyRoute
   '/settings': typeof SettingsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/summary': typeof SummaryRoute
   '/symptom': typeof SymptomRoute
   '/wishlist': typeof WishlistRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/recommendations'
     | '/safety'
     | '/settings'
+    | '/sitemap.xml'
     | '/summary'
     | '/symptom'
     | '/wishlist'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/recommendations'
     | '/safety'
     | '/settings'
+    | '/sitemap.xml'
     | '/summary'
     | '/symptom'
     | '/wishlist'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/recommendations'
     | '/safety'
     | '/settings'
+    | '/sitemap.xml'
     | '/summary'
     | '/symptom'
     | '/wishlist'
@@ -153,6 +165,7 @@ export interface RootRouteChildren {
   RecommendationsRoute: typeof RecommendationsRoute
   SafetyRoute: typeof SafetyRoute
   SettingsRoute: typeof SettingsRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SummaryRoute: typeof SummaryRoute
   SymptomRoute: typeof SymptomRoute
   WishlistRoute: typeof WishlistRoute
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/summary'
       fullPath: '/summary'
       preLoaderRoute: typeof SummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -241,6 +261,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecommendationsRoute: RecommendationsRoute,
   SafetyRoute: SafetyRoute,
   SettingsRoute: SettingsRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   SummaryRoute: SummaryRoute,
   SymptomRoute: SymptomRoute,
   WishlistRoute: WishlistRoute,

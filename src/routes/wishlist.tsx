@@ -10,8 +10,12 @@ export const Route = createFileRoute("/wishlist")({
   head: () => ({
     meta: [
       { title: "Wishlist — OTC&Me" },
-      { name: "description", content: "Saved medications from nearby pharmacies." },
+      { name: "description", content: "Your saved over-the-counter medications and nearby pharmacy availability, all in one place." },
+      { property: "og:title", content: "Wishlist — OTC&Me" },
+      { property: "og:description", content: "Saved OTC medications and nearby pharmacy availability." },
+      { property: "og:url", content: "https://me-otc-trade.lovable.app/wishlist" },
     ],
+    links: [{ rel: "canonical", href: "https://me-otc-trade.lovable.app/wishlist" }],
   }),
   component: WishlistPage,
 });

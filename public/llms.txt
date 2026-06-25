@@ -1,0 +1,13 @@
+# OTC&Me
+
+> Pharmacist-built AI assistant that helps people choose safer over-the-counter medicine based on their personal health profile, conditions, allergies, and current prescriptions.
+
+OTC&Me lets you describe a symptom or scan an OTC product and returns profile-aware recommendations with plain-language safety reasoning. Available in English and Simplified Chinese.
+
+## Pages
+
+- [Home](/): Active health profile dashboard and entry point to the symptom and safety tools.
+- [Symptom check](/symptom): Describe symptoms by voice or text and get recommended OTC categories tailored to your profile.
+- [Medication safety check](/safety): Type or photograph an OTC product to check whether it is safe for your conditions, allergies, and current prescriptions.
+- [Set up your profile](/onboarding): Create a personal health profile (conditions, allergies, prescriptions, lifestyle) used to personalize recommendations.
+- [Wishlist](/wishlist): Saved OTC medications and nearby pharmacy availability.

@@ -18,7 +18,13 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/history/$id")({
-  head: () => ({ meta: [{ title: "Past consultation — OTC&Me" }] }),
+  head: () => ({
+    meta: [
+      { title: "Past consultation — OTC&Me" },
+      { name: "description", content: "Review a past OTC&Me consultation, recommendation, and safety reasoning from your history." },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: HistoryDetailPage,
 });
 

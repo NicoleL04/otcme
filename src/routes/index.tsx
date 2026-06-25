@@ -15,7 +15,11 @@ export const Route = createFileRoute("/")({
         content:
           "Pharmacist-built guidance for safer over-the-counter medicine choices based on your personal health profile.",
       },
+      { property: "og:title", content: "OTC&Me — Your AI OTC aisle assistant" },
+      { property: "og:description", content: "Pharmacist-built guidance for safer OTC choices, tailored to your health profile." },
+      { property: "og:url", content: "https://me-otc-trade.lovable.app/" },
     ],
+    links: [{ rel: "canonical", href: "https://me-otc-trade.lovable.app/" }],
   }),
   component: Home,
 });
@@ -53,7 +57,7 @@ function Home() {
             </div>
             <div className="flex-1">
               <p className="text-sm text-muted-foreground">{t("home_active_profile")}</p>
-              <h1 className="text-2xl font-semibold">{profile.profile_name}</h1>
+              <h1 className="text-2xl font-semibold">Health Dashboard: {profile.profile_name}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 {t("onb_age")} {profile.age} • {profile.gender}
                 {profile.height && profile.weight ? ` • ${profile.height} / ${profile.weight}` : ""}

@@ -12,7 +12,14 @@ import { Pill, ArrowRight, ArrowLeft, Check } from "lucide-react";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
-    meta: [{ title: "Set up your profile — OTC&Me" }],
+    meta: [
+      { title: "Set up your profile — OTC&Me" },
+      { name: "description", content: "Create a personal health profile so OTC&Me can tailor over-the-counter medicine recommendations to your conditions and prescriptions." },
+      { property: "og:title", content: "Set up your profile — OTC&Me" },
+      { property: "og:description", content: "Build your health profile to get safer, personalized OTC recommendations." },
+      { property: "og:url", content: "https://me-otc-trade.lovable.app/onboarding" },
+    ],
+    links: [{ rel: "canonical", href: "https://me-otc-trade.lovable.app/onboarding" }],
   }),
   component: Onboarding,
 });
