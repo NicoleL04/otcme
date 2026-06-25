@@ -4,6 +4,15 @@ import { z } from "zod";
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
 
+const languageSchema = z.enum(["en", "zh"]).optional();
+
+function langInstruction(language?: "en" | "zh"): string {
+  if (language === "zh") {
+    return "\n\nIMPORTANT: Respond entirely in Simplified Chinese (简体中文). Use natural, patient-friendly Chinese medical terms (e.g. 布洛芬, 对乙酰氨基酚, 高血压, 糖尿病). All field values in JSON output — including category_name, reason, dosage_guidance, examples, explanation, and any text — must be in Chinese. Do not include English translations.";
+  }
+  return "";
+}
+
 type ChatMessage = {
   role: "system" | "user" | "assistant";
   content:
