@@ -26,7 +26,29 @@ import { useT, useLanguage } from "@/lib/i18n";
 
 export const Route = createFileRoute("/safety")({
   head: () => ({
-    meta: [{ title: "Medication safety check — OTC&Me" }],
+    meta: [
+      { title: "Medication safety check — OTC&Me" },
+      { name: "description", content: "Check whether an over-the-counter medication is safe for your health profile, allergies, and current prescriptions in seconds." },
+      { property: "og:title", content: "Medication safety check — OTC&Me" },
+      { property: "og:description", content: "Snap a photo or type a medication name to get a profile-aware OTC safety check." },
+      { property: "og:url", content: "https://me-otc-trade.lovable.app/safety" },
+    ],
+    links: [{ rel: "canonical", href: "https://me-otc-trade.lovable.app/safety" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Service",
+          name: "OTC Medication Safety Check",
+          serviceType: "Medication safety screening",
+          provider: { "@type": "Organization", name: "OTC&Me" },
+          areaServed: "Worldwide",
+          description: "Profile-aware safety check for over-the-counter medications, accounting for chronic conditions, allergies, and current prescriptions.",
+          url: "https://me-otc-trade.lovable.app/safety",
+        }),
+      },
+    ],
   }),
   component: SafetyPage,
 });
