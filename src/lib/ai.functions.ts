@@ -68,6 +68,7 @@ export const getClarifyingQuestions = createServerFn({ method: "POST" })
     z.object({
       profile: z.string(),
       symptom: z.string().min(1),
+      language: languageSchema,
     }),
   )
   .handler(async ({ data }) => {
@@ -79,7 +80,7 @@ export const getClarifyingQuestions = createServerFn({ method: "POST" })
 At least ONE of the questions MUST be a temporal/recency probe that the static profile would not capture — pick whichever is most relevant to the symptom (e.g. any medicine already taken today/in the last 24-72h, recent procedure or vaccination, recent alcohol use, new supplement, recent antibiotics, pregnancy/breastfeeding).
 
 Respond with ONLY the questions, plainly written, no preamble. Patient profile:
-${data.profile}`,
+${data.profile}${langInstruction(data.language)}`,
       },
       { role: "user", content: data.symptom },
     ]);
