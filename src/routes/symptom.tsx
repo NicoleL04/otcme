@@ -158,9 +158,7 @@ function SymptomPage() {
         }
         if (voice.isCancelled()) throw new Error("__voice_cancelled__");
         if (!answer && attempt < retries) {
-          const r =
-            opts.rephrase ||
-            "Sorry, I didn't quite catch that. Could you say it once more?";
+          const r = opts.rephrase || t("voice_didnt_catch");
           setChat((c) => [...c, { role: "assistant", text: r }]);
           await voice.speak(r);
           if (voice.isCancelled()) throw new Error("__voice_cancelled__");
