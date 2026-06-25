@@ -272,6 +272,7 @@ function ProductExplorer({
   examples: string[];
 }) {
   const fetchProducts = useServerFn(getProductDetails);
+  const t = useT();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<ProductList | null>(null);
 
@@ -300,11 +301,11 @@ function ProductExplorer({
       >
         {loading ? (
           <>
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading products…
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("rec_loading_products")}
           </>
         ) : (
           <>
-            <Tag className="h-3.5 w-3.5" /> Learn more — products &amp; prices
+            <Tag className="h-3.5 w-3.5" /> {t("rec_learn_more")}
           </>
         )}
       </button>
@@ -314,7 +315,7 @@ function ProductExplorer({
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Products containing {data.active_ingredient}
+        {t("rec_products_containing", { name: data.active_ingredient })}
       </p>
       <ul className="mt-2 divide-y">
         {data.products.map((p, i) => (
