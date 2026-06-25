@@ -222,7 +222,7 @@ export function useVoiceAssistant() {
       }
       const gen = genRef.current;
       const rec = new Ctor();
-      rec.lang = "en-US";
+      rec.lang = language === "zh" ? "zh-CN" : "en-US";
       rec.interimResults = true;
       rec.continuous = false;
       let finalText = "";
