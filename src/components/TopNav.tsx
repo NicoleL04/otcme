@@ -2,11 +2,14 @@ import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { getActiveProfile, getProfiles, setActiveProfileId, type Profile } from "@/lib/profile";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useT } from "@/lib/i18n";
 import { ChevronDown, Pill, Settings, UserPlus } from "lucide-react";
 
 export function TopNav() {
   const router = useRouter();
   const navigate = useNavigate();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [active, setActive] = useState<Profile | null>(null);
@@ -36,7 +39,9 @@ export function TopNav() {
           </div>
           <span className="text-lg font-semibold text-navy">OTC&amp;Me</span>
         </Link>
-        {active && (
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher />
+          {active && (
           <div className="relative">
             <button
               onClick={() => setOpen((v) => !v)}
