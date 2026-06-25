@@ -65,7 +65,7 @@ export function TopNav() {
               <div className="absolute right-0 z-20 mt-2 w-64 overflow-hidden rounded-xl border bg-popover shadow-lg">
                 <div className="border-b bg-muted/30 px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Switch profile
+                    {t("nav_switch_profile")}
                   </p>
                 </div>
                 <div className="p-1">
@@ -78,7 +78,7 @@ export function TopNav() {
                       }`}
                     >
                       <span>{p.profile_name}</span>
-                      <span className="text-xs text-muted-foreground">Age {p.age}</span>
+                      <span className="text-xs text-muted-foreground">{t("onb_age")} {p.age}</span>
                     </button>
                   ))}
                 </div>
@@ -92,7 +92,7 @@ export function TopNav() {
                       navigate({ to: "/settings" });
                     }}
                   >
-                    <Settings className="h-4 w-4" /> Settings
+                    <Settings className="h-4 w-4" /> {t("nav_settings")}
                   </Button>
                   <Button
                     variant="ghost"
@@ -103,13 +103,14 @@ export function TopNav() {
                       navigate({ to: "/onboarding" });
                     }}
                   >
-                    <UserPlus className="h-4 w-4" /> Add new profile
+                    <UserPlus className="h-4 w-4" /> {t("nav_add_profile")}
                   </Button>
                 </div>
               </div>
             )}
           </div>
-        )}
+          )}
+        </div>
       </div>
     </header>
   );
