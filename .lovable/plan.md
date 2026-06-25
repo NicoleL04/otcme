@@ -1,26 +1,35 @@
-# Finish remaining SEO findings
+## Why the audio is broken
 
-## Skip
-- **Drug-interactions guide** (`agent_content:semrush_content_suggestions`) — leave as-is per your request. I can revisit later if you want a `/guides/drug-interactions` content page.
+Server logs show every TTS call returns:
 
-## Connect Google Search Console
+```
+ElevenLabs TTS failed: 401 {"status":"invalid_api_key","message":"Invalid API key"}
+```
 
-1. **Link the connector** — call `standard_connectors--connect` with `connector_id: "google_search_console"`. You authorize the Google account whose Search Console should own the property. This injects `GOOGLE_SEARCH_CONSOLE_API_KEY` into the project.
-2. **Request a META verification token** from Google for `https://me-otc-trade.lovable.app/`.
-3. **Add the meta tag** to `src/routes/__root.tsx` `head().meta` array:
-   ```
-   { name: "google-site-verification", content: "<token from step 2>" }
-   ```
-4. **Publish** the project so the tag is server-rendered on the live origin (required — Google fetches the raw HTML).
-5. **Verify** by calling Google's `siteVerification/v1/webResource?verificationMethod=META`.
-6. **Add the site** to your Search Console property list via `PUT /webmasters/v3/sites/<encoded-url>`.
-7. **Submit the sitemap** `https://me-otc-trade.lovable.app/sitemap.xml` via `PUT /webmasters/v3/sites/<encoded-url>/sitemaps/<encoded-sitemap-url>`.
-8. **Mark the `gsc:gsc` finding fixed.**
+`ELEVENLABS_API_KEY` is present (synced from the ElevenLabs connector) but ElevenLabs is rejecting it. That's why nothing ever plays — the `speak()` promise resolves with no audio after the fetch throws.
 
-## What you'll need to do
-- Approve the connector OAuth flow when prompted.
-- Click **Publish** after step 3 so the verification tag is live before I call verify.
+The client side (`useVoiceAssistant`) is fine; the request itself never returns valid MP3 bytes.
 
-## Out of scope
-- The drug-interactions content guide.
-- Any custom-domain setup — uses the existing `me-otc-trade.lovable.app` domain.
+## Can it speak Chinese?
+
+Yes. The current model `eleven_turbo_v2_5` is multilingual and handles Mandarin. The fixed voice `JAATlCsz6GCH2vUjFcLg` will pronounce Chinese text once the key works. We can optionally pass the active UI language to the server fn so the model has an explicit language hint (slightly better pronunciation on short strings).
+
+## Plan
+
+1. **Fix the credential** — the connector-synced key is invalid. Two options:
+   - Reconnect the ElevenLabs connector with a working API key (recommended, keeps it managed).
+   - Or replace it with a manual `ELEVENLABS_API_KEY` secret.
+   I'll trigger the reconnect flow once you confirm.
+
+2. **Verify** by hitting `/api/public/tts-test` again — expect HTTP 200 with `audio/mpeg` instead of 500.
+
+3. **Improve Chinese support** in `src/lib/tts.functions.ts`:
+   - Accept an optional `language: 'en' | 'zh'` input.
+   - Keep `eleven_turbo_v2_5` (multilingual) and pass `language_code: 'zh'` when Chinese.
+   - In `useVoiceAssistant.speak`, forward the current `language` from `useLanguage()`.
+
+4. No UI/layout changes; assistant button behavior stays the same.
+
+## Question for you
+
+Do you want me to (a) reconnect the ElevenLabs connector, or (b) set a manual `ELEVENLABS_API_KEY` you'll paste?
