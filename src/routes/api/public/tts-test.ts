@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { synthesizeSpeech } from "@/lib/tts.functions";
 
-export const Route = createFileRoute("/api/tts-test")({
+export const Route = createFileRoute("/api/public/tts-test")({
   server: {
     handlers: {
       GET: async () => {

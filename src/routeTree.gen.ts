@@ -18,7 +18,7 @@ import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HistoryIdRouteImport } from './routes/history.$id'
-import { Route as ApiTtsTestRouteImport } from './routes/api/tts-test'
+import { Route as ApiPublicTtsTestRouteImport } from './routes/api/public/tts-test'
 
 const WishlistRoute = WishlistRouteImport.update({
   id: '/wishlist',
@@ -65,9 +65,9 @@ const HistoryIdRoute = HistoryIdRouteImport.update({
   path: '/history/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiTtsTestRoute = ApiTtsTestRouteImport.update({
-  id: '/api/tts-test',
-  path: '/api/tts-test',
+const ApiPublicTtsTestRoute = ApiPublicTtsTestRouteImport.update({
+  id: '/api/public/tts-test',
+  path: '/api/public/tts-test',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -80,8 +80,8 @@ export interface FileRoutesByFullPath {
   '/summary': typeof SummaryRoute
   '/symptom': typeof SymptomRoute
   '/wishlist': typeof WishlistRoute
-  '/api/tts-test': typeof ApiTtsTestRoute
   '/history/$id': typeof HistoryIdRoute
+  '/api/public/tts-test': typeof ApiPublicTtsTestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -92,8 +92,8 @@ export interface FileRoutesByTo {
   '/summary': typeof SummaryRoute
   '/symptom': typeof SymptomRoute
   '/wishlist': typeof WishlistRoute
-  '/api/tts-test': typeof ApiTtsTestRoute
   '/history/$id': typeof HistoryIdRoute
+  '/api/public/tts-test': typeof ApiPublicTtsTestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -105,8 +105,8 @@ export interface FileRoutesById {
   '/summary': typeof SummaryRoute
   '/symptom': typeof SymptomRoute
   '/wishlist': typeof WishlistRoute
-  '/api/tts-test': typeof ApiTtsTestRoute
   '/history/$id': typeof HistoryIdRoute
+  '/api/public/tts-test': typeof ApiPublicTtsTestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -119,8 +119,8 @@ export interface FileRouteTypes {
     | '/summary'
     | '/symptom'
     | '/wishlist'
-    | '/api/tts-test'
     | '/history/$id'
+    | '/api/public/tts-test'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -131,8 +131,8 @@ export interface FileRouteTypes {
     | '/summary'
     | '/symptom'
     | '/wishlist'
-    | '/api/tts-test'
     | '/history/$id'
+    | '/api/public/tts-test'
   id:
     | '__root__'
     | '/'
@@ -143,8 +143,8 @@ export interface FileRouteTypes {
     | '/summary'
     | '/symptom'
     | '/wishlist'
-    | '/api/tts-test'
     | '/history/$id'
+    | '/api/public/tts-test'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -156,8 +156,8 @@ export interface RootRouteChildren {
   SummaryRoute: typeof SummaryRoute
   SymptomRoute: typeof SymptomRoute
   WishlistRoute: typeof WishlistRoute
-  ApiTtsTestRoute: typeof ApiTtsTestRoute
   HistoryIdRoute: typeof HistoryIdRoute
+  ApiPublicTtsTestRoute: typeof ApiPublicTtsTestRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -225,11 +225,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoryIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/tts-test': {
-      id: '/api/tts-test'
-      path: '/api/tts-test'
-      fullPath: '/api/tts-test'
-      preLoaderRoute: typeof ApiTtsTestRouteImport
+    '/api/public/tts-test': {
+      id: '/api/public/tts-test'
+      path: '/api/public/tts-test'
+      fullPath: '/api/public/tts-test'
+      preLoaderRoute: typeof ApiPublicTtsTestRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -244,8 +244,8 @@ const rootRouteChildren: RootRouteChildren = {
   SummaryRoute: SummaryRoute,
   SymptomRoute: SymptomRoute,
   WishlistRoute: WishlistRoute,
-  ApiTtsTestRoute: ApiTtsTestRoute,
   HistoryIdRoute: HistoryIdRoute,
+  ApiPublicTtsTestRoute: ApiPublicTtsTestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
