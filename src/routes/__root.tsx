@@ -97,8 +97,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "OTC&Me Connect is a web app that provides personalized over-the-counter medication recommendations and health insights." },
       { property: "og:description", content: "OTC&Me Connect is a web app that provides personalized over-the-counter medication recommendations and health insights." },
       { name: "twitter:description", content: "OTC&Me Connect is a web app that provides personalized over-the-counter medication recommendations and health insights." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d387eb15-4c72-4e16-8d70-5010db864d46/id-preview-ff3323b5--d7313315-d63c-40b3-af96-2aa2f27b56d2.lovable.app-1780860524982.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d387eb15-4c72-4e16-8d70-5010db864d46/id-preview-ff3323b5--d7313315-d63c-40b3-af96-2aa2f27b56d2.lovable.app-1780860524982.png" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/832b4908-a7e7-4132-ae91-fa02775c3be8" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/832b4908-a7e7-4132-ae91-fa02775c3be8" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
