@@ -18,7 +18,7 @@ OTC&Me is a patient-facing web app that helps users safely navigate over-the-cou
 
 Users pick a symptom, answer a few safety screening questions, and receive personalized, pharmacist-designed guidance. High-risk situations get escalated automatically. Low-risk situations empower the patient to self-serve confidently.
 
-If you're interested 🔗 **Live Demo:** https://me-otc-trade.lovable.app)
+If you're interested 🔗 **Live Demo:** https://me-otc-trade.lovable.app
 ---
 
 ## ✨ Core Features
