@@ -598,22 +598,23 @@ function VoiceStatus({
   listening: boolean;
   interim: string;
 }) {
+  const t = useT();
   return (
     <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
       {speaking ? (
         <>
           <Volume2 className="h-4 w-4 animate-pulse text-primary" />
-          <span>Assistant is speaking…</span>
+          <span>{t("voice_speaking")}</span>
         </>
       ) : listening ? (
         <>
           <Mic className="h-4 w-4 animate-pulse text-primary" />
-          <span>Listening{interim ? `: "${interim}"` : "…"}</span>
+          <span>{t("voice_listening")}{interim ? `: "${interim}"` : "…"}</span>
         </>
       ) : (
         <>
           <MicOff className="h-4 w-4" />
-          <span>Thinking…</span>
+          <span>{t("voice_thinking")}</span>
         </>
       )}
     </div>
