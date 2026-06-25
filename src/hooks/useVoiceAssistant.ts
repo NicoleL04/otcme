@@ -203,7 +203,8 @@ export function useVoiceAssistant() {
 
       audio.play().catch(() => finish());
     });
-  }, [hardStopAudio]);
+  }, [hardStopAudio, language]);
+
 
   const listen = useCallback((): Promise<string> => {
     return new Promise((resolve, reject) => {
