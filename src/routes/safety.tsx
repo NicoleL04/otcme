@@ -22,6 +22,7 @@ import {
   Upload,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useT, useLanguage } from "@/lib/i18n";
 
 export const Route = createFileRoute("/safety")({
   head: () => ({
@@ -32,6 +33,8 @@ export const Route = createFileRoute("/safety")({
 
 function SafetyPage() {
   const navigate = useNavigate();
+  const t = useT();
+  const { language } = useLanguage();
   const check = useServerFn(checkMedicationSafety);
   const extract = useServerFn(extractMedicationFromImage);
 
@@ -61,9 +64,9 @@ function SafetyPage() {
         const r = await extract({ data: { image_data_url: dataUrl } });
         if (r.medication_name && r.medication_name.toUpperCase() !== "UNKNOWN") {
           setMedName(r.medication_name);
-          toast.success(`Identified: ${r.medication_name}`);
+          toast.success(t("saf_identified", { name: r.medication_name }));
         } else {
-          toast.error("Couldn't read the label — type the name manually.");
+          toast.error(t("saf_couldnt_read"));
         }
       } catch (e: unknown) {
         toast.error(e instanceof Error ? e.message : "Image read failed");
@@ -80,7 +83,7 @@ function SafetyPage() {
     setResult(null);
     try {
       const r = await check({
-        data: { profile: profileSummary(profile), medication_name: medName.trim() },
+        data: { profile: profileSummary(profile), medication_name: medName.trim(), language },
       });
       setResult(r);
     } catch (e: unknown) {
