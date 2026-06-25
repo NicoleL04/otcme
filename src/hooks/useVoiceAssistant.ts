@@ -191,7 +191,7 @@ export function useVoiceAssistant() {
       audio.onerror = finish;
 
       interval = window.setInterval(() => {
-        if (gen !== genRef.current || cancelledRef.current || audio.paused) {
+        if (gen !== genRef.current || cancelledRef.current) {
           try {
             audio.pause();
           } catch {
