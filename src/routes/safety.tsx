@@ -211,26 +211,27 @@ function ResultCard({
   result: SafetyResult;
   onSummary: () => void;
 }) {
+  const t = useT();
   const map = {
     Yes: {
       border: "border-success",
       bg: "bg-success/10",
       icon: <CheckCircle2 className="h-8 w-8 text-success" />,
-      title: "Yes — Safe",
+      title: t("saf_yes"),
       badge: "bg-success text-success-foreground",
     },
     Caution: {
       border: "border-warning",
       bg: "bg-warning/10",
       icon: <AlertTriangle className="h-8 w-8 text-warning" />,
-      title: "Use with caution",
+      title: t("saf_caution"),
       badge: "bg-warning text-warning-foreground",
     },
     No: {
       border: "border-destructive",
       bg: "bg-destructive/10",
       icon: <XCircle className="h-8 w-8 text-destructive" />,
-      title: "No — Avoid",
+      title: t("saf_no"),
       badge: "bg-destructive text-destructive-foreground",
     },
   }[result.safety_status];
@@ -250,7 +251,7 @@ function ResultCard({
         </div>
       </div>
       <Button onClick={onSummary} variant="outline" className="mt-4 w-full">
-        <FileText className="h-4 w-4" /> Generate Pharmacist Summary Card
+        <FileText className="h-4 w-4" /> {t("rec_generate_summary")}
       </Button>
     </div>
   );
